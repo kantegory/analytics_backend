@@ -30,6 +30,8 @@ services:
         restart: always
         depends_on:
             - db
+        env_file:
+            - .env
 #        networks:
 #            - djangonetwork
     frontend:

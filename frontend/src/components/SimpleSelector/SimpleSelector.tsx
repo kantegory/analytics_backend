@@ -14,14 +14,13 @@ import {QualificationSelectorProps} from './types';
 import styles from './SimpleSelector.styles';
 import {FormHelperText} from "@mui/material";
 
-const Selector = ({classes, label, value, onChange, noMargin, wrapClass, metaList, errorMessage, disabled}: QualificationSelectorProps) => {
+const Selector = ({classes, label, value, onChange, noMargin, wrapClass, metaList, errorMessage, disabled, onClickMenuItem}: QualificationSelectorProps) => {
     const handleChange = (e: any) => {
         onChange(get(e, 'target.value'))
     }
 
     return (
-        <FormControl className={classNames(wrapClass, {[classes.marginBottom30]: !noMargin})}
-                     error={!!errorMessage}>
+        <FormControl className={classNames(wrapClass, {[classes.marginBottom30]: !noMargin})} error={!!errorMessage}>
             <InputLabel shrink id="section-label">
                 {label}
             </InputLabel>
@@ -40,7 +39,7 @@ const Selector = ({classes, label, value, onChange, noMargin, wrapClass, metaLis
                 disabled={disabled}
             >
                 {metaList.map(item =>
-                    <MenuItem value={item.value} key={item.value}>
+                    <MenuItem value={item.value} key={item.value} onClick={() => onClickMenuItem?.(item.value)}>
                         {item.label}
                     </MenuItem>
                 )}

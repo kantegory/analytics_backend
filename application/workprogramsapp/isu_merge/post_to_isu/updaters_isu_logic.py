@@ -21,7 +21,7 @@ def generate_contents(type_id, order=None, volume=None, ):
 def generate_response(url, headers, body, obj_name, obj_id, ap_id=None):
     # print(body)
     response = requests.post(url, headers=headers, data=json.dumps(body, ensure_ascii=False).encode('utf-8'))
-    # print(response.text)
+    print(response.text)
     try:
         IsuObjectsSendLogger.objects.create(obj_id=obj_id, obj_type=obj_name, generated_json=body,
                                             error_status=response.json()["error_code"], returned_data=response.json(),
@@ -79,6 +79,8 @@ def post_gia_to_isu(token, gia, ap_id):
     elif practice_dict["name_ru"] == "preparation-en":
         practice_dict["name_ru"] = "Подготовка к защите и защита ВКР"
         practice_dict["name_en"] = "Preparation for Thesis Defense and Thesis Defense"
+        practice_dict["lang_id"] = 1
+
 
     practice_dict["type_id"] = 3
     practice_dict["format_id"] = 1
@@ -271,17 +273,17 @@ def post_module_to_isu(token, module, parent_id, block, ap_id):
     module_dict["rules_id"] = rules_ids[module.selection_rule]
     if module.selection_parametr:
         module_dict["params"] = [int(el) for el in module.selection_parametr.split(", ")]
+    else:
+        module_dict["params"] = None
     module_dict["rpd_module_id"] = module.id
     return generate_response(url, headers, body, "module", module.id, ap_id)[0]
 
 
-def generate_wp_in_lower_module_for_ap_isu(disc_id, changeblock, module, isu_id_lower_module):
+def generate_wp_in_lower_module_for_ap_isu(disc_id, changeblock, module, isu_id_lower_module, required):
     replaceable = False
-    required = False
+    #required = False
     if changeblock.change_type != "Required":
         replaceable = True
-    if module.selection_rule == "all":
-        required = True
 
     return {"disc_id": disc_id,
             "module_id": isu_id_lower_module,

@@ -12,8 +12,17 @@ export const initialState: workProgramState = {
     },
     [fields.WORK_PROGRAM_EVALUATION_TOOLS]: [],
     [fields.WORK_PROGRAM_EVALUATION_TOOL]: {},
+
+    competenceFilters: {
+        year: 2023,
+        imp: null,
+        ap: null
+    },
+
     [fields.WORK_PROGRAM_INTERMEDIATE_CERTIFICATION_TOOLS]: [],
     [fields.WORK_PROGRAM_INTERMEDIATE_CERTIFICATION_TOOL]: {},
+    [fields.AP_WITH_COMPETENCES_AND_INDICATORS_TO_WP]: [],
+    [fields.ALL_COMPETENCES_AND_INDICATORS_FOR_WP]: [],
     [fields.WORK_PROGRAM_RESULTS]: [],
     [fields.WORK_PROGRAM_COMMENTS]: [],
     [fields.DIALOGS]: {
@@ -46,6 +55,16 @@ const setWorkProgramEvaluationTools = (state: workProgramState, {payload}: any):
     [fields.WORK_PROGRAM_EVALUATION_TOOLS]: payload
 });
 
+const setApWithCompetencesAndIndicatorsToWp = (state: workProgramState, {payload}: any): workProgramState => ({
+    ...state,
+    [fields.AP_WITH_COMPETENCES_AND_INDICATORS_TO_WP]: payload
+});
+
+const setAllCompetencesAndIndicatorsForWp = (state: workProgramState, {payload}: any): workProgramState => ({
+    ...state,
+    [fields.ALL_COMPETENCES_AND_INDICATORS_FOR_WP]: payload
+});
+
 const setWorkProgramEvaluationTool = (state: workProgramState, {payload}: any): workProgramState => ({
     ...state,
     [fields.WORK_PROGRAM_EVALUATION_TOOL]: payload
@@ -54,6 +73,30 @@ const setWorkProgramEvaluationTool = (state: workProgramState, {payload}: any): 
 const setIntermediateCertification = (state: workProgramState, {payload}: any): workProgramState => ({
     ...state,
     [fields.WORK_PROGRAM_INTERMEDIATE_CERTIFICATION_TOOL]: payload
+});
+
+const updateCompetenceFilterYear = (state: workProgramState, {payload}: any): workProgramState => ({
+    ...state,
+    competenceFilters: {
+        ...state.competenceFilters,
+        year: payload,
+    }
+});
+
+const updateCompetenceFilterIMP = (state: workProgramState, {payload}: any): workProgramState => ({
+    ...state,
+    competenceFilters: {
+        ...state.competenceFilters,
+        imp: payload,
+    }
+});
+
+const updateCompetenceFilterAP = (state: workProgramState, {payload}: any): workProgramState => ({
+    ...state,
+    competenceFilters: {
+        ...state.competenceFilters,
+        ap: payload,
+    }
 });
 
 const setComments = (state: workProgramState, {payload}: any): workProgramState => ({
@@ -101,8 +144,16 @@ export const reducer = createReducer(initialState, {
 
     [actions.setComments.type]: setComments,
 
+    [actions.setApWithCompetencesAndIndicatorsToWp.type]: setApWithCompetencesAndIndicatorsToWp,
+    [actions.setAllCompetencesAndIndicatorsForWp.type]: setAllCompetencesAndIndicatorsForWp,
+
     [actions.setWorkProgramEvaluationTools.type]: setWorkProgramEvaluationTools,
     [actions.setWorkProgramEvaluationTool.type]: setWorkProgramEvaluationTool,
     [actions.setIntermediateCertification.type]: setIntermediateCertification,
+
+    [actions.updateCompetenceFilterYear.type]: updateCompetenceFilterYear,
+    [actions.updateCompetenceFilterIMP.type]: updateCompetenceFilterIMP,
+    [actions.updateCompetenceFilterAP.type]: updateCompetenceFilterAP,
+
     [actions.pageDown.type]: pageDown,
 });

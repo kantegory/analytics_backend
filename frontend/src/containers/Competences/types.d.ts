@@ -16,6 +16,8 @@ export interface CompetenceActions {
     setIndicators: any;
     changeSearchQuery: any;
     changeCodeQuery: any;
+    changeFilterOnlyWithStandard: any;
+    changeFilterAcademicPlan: any;
     getCompetences: any;
     setCompetences: any;
     createNewCompetence: any;
@@ -37,6 +39,8 @@ export interface competenceState {
     [fields.CURRENT_PAGE]: number;
     [fields.SEARCH_QUERY]: string;
     [fields.SEARCH_CODE]: string;
+    [fields.FILTER_ONLY_WITH_STANDARD]: boolean;
+    [fields.FILTER_ACADEMIC_PLAN]: number | undefined;
     [fields.COMPETENCE_LIST]: Array<CompetenceType>;
     [fields.COMPETENCE_DIALOG]: {
         [fields.IS_OPEN_DIALOG]: boolean;

@@ -1,7 +1,9 @@
+from django.db.models import Q
 from drf_yasg2 import openapi
 from drf_yasg2.utils import swagger_auto_schema
 from rest_framework import viewsets, filters, status, mixins, generics
-from rest_framework.permissions import IsAdminUser
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
@@ -12,7 +14,7 @@ from gia_practice_app.Practice.serializers import PracticeSerializer, PracticeTe
     PracticeInFieldOfStudyCreateSerializer, ZunPracticeForManyCreateSerializer, \
     PracticeInFieldOfStudyForCompeteceListSerializer
 from workprogramsapp.permissions import IsRpdDeveloperOrReadOnly, IsOwnerOrDodWorkerOrReadOnly
-from workprogramsapp.models import PracticeInFieldOfStudy
+from workprogramsapp.models import PracticeInFieldOfStudy, AcademicPlan
 
 
 class PracticeSet(viewsets.ModelViewSet):
@@ -38,11 +40,11 @@ class PracticeTemplateSet(viewsets.ModelViewSet):
 
 
 class PrerequisitesPracticeSet(mixins.CreateModelMixin,
-                   #mixins.RetrieveModelMixin,
-                   mixins.UpdateModelMixin,
-                   mixins.DestroyModelMixin,
-                   #mixins.ListModelMixin,
-                   GenericViewSet):
+                               # mixins.RetrieveModelMixin,
+                               mixins.UpdateModelMixin,
+                               mixins.DestroyModelMixin,
+                               # mixins.ListModelMixin,
+                               GenericViewSet):
     my_tags = ["Gia and Practice"]
     queryset = PrerequisitesOfPractice.objects.all()
     serializer_class = ItemInPracticeCreateSerializer
@@ -51,11 +53,11 @@ class PrerequisitesPracticeSet(mixins.CreateModelMixin,
 
 
 class OutcomesPracticeSet(mixins.CreateModelMixin,
-                   #mixins.RetrieveModelMixin,
-                   mixins.UpdateModelMixin,
-                   mixins.DestroyModelMixin,
-                   #mixins.ListModelMixin,
-                   GenericViewSet):
+                          # mixins.RetrieveModelMixin,
+                          mixins.UpdateModelMixin,
+                          mixins.DestroyModelMixin,
+                          # mixins.ListModelMixin,
+                          GenericViewSet):
     my_tags = ["Gia and Practice"]
     queryset = OutcomesOfPractice.objects.all()
     serializer_class = OutcomesInPracticeCreateSerializer
@@ -63,12 +65,12 @@ class OutcomesPracticeSet(mixins.CreateModelMixin,
     permission_classes = [IsOwnerOrDodWorkerOrReadOnly]
 
 
-class PracticeInFieldOfStudySet(#mixins.CreateModelMixin,
-                   #mixins.RetrieveModelMixin,
-                   #mixins.UpdateModelMixin,
-                   #mixins.DestroyModelMixin,
-                   mixins.ListModelMixin,
-                   GenericViewSet):
+class PracticeInFieldOfStudySet(  # mixins.CreateModelMixin,
+    # mixins.RetrieveModelMixin,
+    # mixins.UpdateModelMixin,
+    # mixins.DestroyModelMixin,
+    mixins.ListModelMixin,
+    GenericViewSet):
     my_tags = ["Gia and Practice"]
     queryset = PracticeInFieldOfStudy.objects.all()
     serializer_class = PracticeInFieldOfStudyCreateSerializer
@@ -76,39 +78,89 @@ class PracticeInFieldOfStudySet(#mixins.CreateModelMixin,
     permission_classes = [IsOwnerOrDodWorkerOrReadOnly]
 
 
-
 class ZunPracticeManyViewSet(mixins.CreateModelMixin,
-                   #mixins.RetrieveModelMixin,
-                   #mixins.UpdateModelMixin,
-                   mixins.DestroyModelMixin,
-                   #mixins.ListModelMixin,
-                   GenericViewSet):
+                             # mixins.RetrieveModelMixin,
+                             # mixins.UpdateModelMixin,
+                             mixins.DestroyModelMixin,
+                             # mixins.ListModelMixin,
+                             GenericViewSet):
     my_tags = ["Gia and Practice"]
     model = ZunPractice
     queryset = ZunPractice.objects.all()
     serializer_class = ZunPracticeForManyCreateSerializer
     http_method_names = ['post', 'delete', 'patch']
+    permission_classes = [IsRpdDeveloperOrReadOnly]
 
-    @swagger_auto_schema(request_body=openapi.Schema(
-        type=openapi.TYPE_OBJECT,
-        required=['version'],
-        properties={
-            'pra_in_fss': openapi.Schema(type=openapi.TYPE_ARRAY,
-                                         description='id объектов класса PracticeInFieldOfStudy (api/practice/fieldofstudies_for_competences/<int:practice_id>)',
-                                         items=openapi.Items(type=openapi.TYPE_INTEGER)),
-            'zun': openapi.Schema(type=openapi.TYPE_OBJECT, properties={
-                'indicator_in_zun': openapi.Schema(type=openapi.TYPE_INTEGER, description='id интикатора'),
-                'items': openapi.Schema(type=openapi.TYPE_ARRAY, description='id объектов OutcomesOfPractice (доступны в ендпоинте практики)',
-                                             items=openapi.Items(type=openapi.TYPE_INTEGER)),
-                }, )
-            },
-        ),
-        operation_description='Метод для добавления компетенций в практики')
     def create(self, request, *args, **kwargs):
-        for pr_in_fs in request.data['pra_in_fss']:
-            serializer = self.get_serializer(data=request.data['zun'])
-            serializer.is_valid(raise_exception=True)
-            serializer.save(practice_in_fs=PracticeInFieldOfStudy.objects.get(id=pr_in_fs))
+        """
+        Вместо gh_id (id ОХ) можно передать iap_id - id ImplementationAcademicPlan
+        Example:
+            {
+            "practice_id": 1 - ссылка на Практику
+            "gh_id": 1 новое - ссылка на ОХ
+            "zun": {
+              "indicator_in_zun": 85,
+              "items": []
+                }
+            }
+             OR
+            {
+            "practice_id": 1 - ссылка на Практику
+            "gh_id": 1 новое - ссылка на ОХ
+            "zun": [
+            {
+              "indicator_in_zun": 85,
+              "items": []
+            },
+            {
+              "indicator_in_zun": 85,
+              "items": []
+            }
+                ]
+            }
+        """
+        if request.data.get('gh_id'):
+            aps = AcademicPlan.objects.filter(
+                academic_plan_in_field_of_study__general_characteristics_in_educational_program__id=int(
+                    request.data.get('gh_id')))
+        if request.data.get('iap_id'):
+            aps = AcademicPlan.objects.filter(
+                # ToDo: id=int(request.data.get('iap_id')))
+                academic_plan_in_field_of_study=int(request.data.get('iap_id')))
+        wp_in_fss = PracticeInFieldOfStudy.objects.filter(
+            Q(practice__id=int(request.data.get('practice_id')),
+              work_program_change_in_discipline_block_module__discipline_block_module__descipline_block__academic_plan__in=aps) |
+            Q(practice__id=int(request.data.get('practice_id')),
+              work_program_change_in_discipline_block_module__discipline_block_module__father_module__descipline_block__academic_plan__in=aps) |
+            Q(practice__id=int(request.data.get('practice_id')),
+              work_program_change_in_discipline_block_module__discipline_block_module__father_module__father_module__descipline_block__academic_plan__in=aps) |
+            Q(practice__id=int(request.data.get('practice_id')),
+              work_program_change_in_discipline_block_module__discipline_block_module__father_module__father_module__father_module__descipline_block__academic_plan__in=aps) |
+            Q(practice__id=int(request.data.get('practice_id')),
+              work_program_change_in_discipline_block_module__discipline_block_module__father_module__father_module__father_module__father_module__descipline_block__academic_plan__in=aps) |
+            Q(practice__id=int(request.data.get('practice_id')),
+              work_program_change_in_discipline_block_module__discipline_block_module__father_module__father_module__father_module__father_module__father_module__descipline_block__academic_plan__in=aps) |
+            Q(practice__id=int(request.data.get('practice_id')),
+              work_program_change_in_discipline_block_module__discipline_block_module__father_module__father_module__father_module__father_module__father_module__father_module__descipline_block__academic_plan__in=aps) |
+            Q(practice__id=int(request.data.get('practice_id')),
+              work_program_change_in_discipline_block_module__discipline_block_module__father_module__father_module__father_module__father_module__father_module__father_module__father_module__descipline_block__academic_plan__in=aps) |
+            Q(practice__id=int(request.data.get('practice_id')),
+              work_program_change_in_discipline_block_module__discipline_block_module__father_module__father_module__father_module__father_module__father_module__father_module__father_module__father_module__descipline_block__academic_plan__in=aps) |
+            Q(practice__id=int(request.data.get('practice_id')),
+              work_program_change_in_discipline_block_module__discipline_block_module__father_module__father_module__father_module__father_module__father_module__father_module__father_module__father_module__father_module__descipline_block__academic_plan__in=aps)
+        ).distinct()
+        print(wp_in_fss)
+        for wp_in_fs in wp_in_fss:
+            zun_obj = request.data['zun']
+            if type(zun_obj) is list:
+                for zun in zun_obj:
+                    serializer = self.get_serializer(data=zun)
+                    serializer.is_valid(raise_exception=True)
+                    serializer.save(practice_in_fs=wp_in_fs)
+            else:
+                serializer = self.get_serializer(data=request.data['zun'])
+                serializer.is_valid(raise_exception=True)
+                serializer.save(practice_in_fs=wp_in_fs)
         return Response(status=status.HTTP_201_CREATED)
 
 
@@ -134,3 +186,52 @@ class PracticeInFieldOfStudyForWorkProgramList(generics.ListAPIView):
         ).distinct()
         serializer = PracticeInFieldOfStudyForCompeteceListSerializer(queryset, many=True)
         return Response(serializer.data)
+
+
+class ZunPracticeManyForAllGhViewSet(mixins.CreateModelMixin,
+                                     # mixins.RetrieveModelMixin,
+                                     # mixins.UpdateModelMixin,
+                                     mixins.DestroyModelMixin,
+                                     # mixins.ListModelMixin,
+                                     GenericViewSet):
+    my_tags = ["Gia and Practice"]
+    model = ZunPractice
+    queryset = ZunPractice.objects.all()
+    serializer_class = ZunPracticeForManyCreateSerializer
+    http_method_names = ['post', 'delete']
+    permission_classes = [IsRpdDeveloperOrReadOnly]
+
+    def create(self, request, *args, **kwargs):
+        """
+        Example:
+            {
+            "practice_id": 1 - ссылка на ПРАКТИКУ
+            "zun": {
+              "indicator_in_zun": 85,
+              "items": []
+                }
+            }
+        """
+        wp_in_fss = PracticeInFieldOfStudy.objects.filter(practice__id=int(request.data.get('practice_id'))).distinct()
+        for wp_in_fs in wp_in_fss:
+            serializer = self.get_serializer(data=request.data['zun'])
+            serializer.is_valid(raise_exception=True)
+            serializer.save(practice_in_fs=wp_in_fs)
+        return Response(status=status.HTTP_201_CREATED)
+
+
+@api_view(['POST'])
+@permission_classes((IsAuthenticated,))
+def zun_many_remove(request):
+    '''
+    EXAMPLE:
+    {
+        "zuns_to_delete": [1, 2, 3]
+    }
+    '''
+    zuns_to_delete = request.data.get("zuns_to_delete")
+
+    for zun in zuns_to_delete:
+        ZunPractice.objects.get(id=zun).delete()
+
+    return Response({"message": "Зуны удалены"}, status=201)

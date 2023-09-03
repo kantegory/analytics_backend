@@ -10,6 +10,7 @@ import {withStyles} from '@mui/styles';
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
+import CircularProgress from '@mui/material/CircularProgress';
 
 import {CharacteristicProps,} from '../types';
 import {steps} from './constants';
@@ -35,8 +36,8 @@ import {CompetenceType} from "../../Competences/types";
 import {CompetenceFields} from "../../Competences/enum";
 import {IndicatorType} from "../../Indicators/types";
 import {IndicatorsFields} from "../../Indicators/enum";
-import {CompetenceTable} from "./CompetencesTable/CompetenceTable";
-import {ProfessionalCompetences} from "./ProfessionalCompetences/ProfessionalCompetences";
+import {CompetenceTable} from "./CompetencesTable";
+import {ProfessionalCompetences} from "./ProfessionalCompetences";
 import ForsitesProfessionalCompetences from "./ForsitesProfessionalCompetences";
 import MinorProfessionalCompetences from "./MinorProfessionalCompetences";
 import AreaOfActivity from "./AreaOfActivity";
@@ -53,19 +54,42 @@ import SimpleSelector from "../../../components/SimpleSelector";
 import Checkbox from "@mui/material/Checkbox";
 import TextField from "../../../components/TextField";
 import {StatusPoint} from "../../../components/StatusPoint";
+import Service from '../service';
+
+const service = new Service();
 
 class Characteristic extends React.Component<CharacteristicProps> {
   state = {
     activeStep: 0,
     addNewOP: false,
+    isFetching: false
   };
 
   componentDidMount() {
+    this.selectActiveStep()
     this.props.actions.getEducationalProgramCharacteristic(get(this.props, 'params.id'));
   }
 
-  handleStep = (number: number) => () => {
-    this.setState({activeStep: number})
+  componentDidUpdate(prevProps: CharacteristicProps) {
+    if (prevProps.location.pathname !== this.props.location.pathname) {
+      this.selectActiveStep()
+    }
+  }
+
+  selectActiveStep = () => {
+    const locations = this.props.location.pathname.split('/')
+    if (locations.length === 3) {
+      return this.handleStep(steps[0].link)
+    }
+    const section = locations[locations.length - 1] - 1
+    this.setState({activeStep: section})
+  }
+
+  getCharacteristicId = () => get(this.props, 'params.id')
+
+  handleStep = (link: (id: number) => string) => {
+    // @ts-ignore
+    this.props.navigate(link(this.getCharacteristicId()))
   };
 
   handleChangeEducationProgramYear = (value: any) => {
@@ -163,8 +187,7 @@ class Characteristic extends React.Component<CharacteristicProps> {
     })
   }
 
-  handleChangeSKEEditorField = (field: string) => (event: any, editor: any) => {
-    const data: string = editor.getData()
+  handleChangeSKEEditorField = (field: string) => (data: string) => {
     this.props.actions.changeEducationalProgramCharacteristic({
       id: this.getEducationalProgramCharacteristicId(),
       educationalProgramId: this.getEducationalProgramId(),
@@ -570,13 +593,14 @@ class Characteristic extends React.Component<CharacteristicProps> {
             metaList={[
               {value: 'online', label: 'Онлайн'},
               {value: 'offline', label: 'Офлайн'},
+              {value: 'mixed', label: 'Смешанный'},
             ]}
             wrapClass={classes.formatRealizationWrapSelector}
             disabled={!canEdit}
           />
           {this.renderRealizationTypeSelect()}
           <br/>
-          {this.renderTypeOP()}
+          {/*this.renderTypeOP()*/}
           <br/>
 
           <Typography>
@@ -590,18 +614,12 @@ class Characteristic extends React.Component<CharacteristicProps> {
       case 1:
         return <div className={classes.editorWrap}>
           <InputLabel className={classes.label}>Аннотация</InputLabel>
-          {canEdit ? (
-            <CKEditor
-              value={get(educationalProgramCharacteristic, EducationProgramCharacteristicFields.ANNOTATION, '')}
-              onBlur={this.handleChangeSKEEditorField(EducationProgramCharacteristicFields.ANNOTATION)}
-              toolbarContainerId="toolbar-container"
-              readOnly={!canEdit}
-            />
-          ) : (
-            <Typography>
-              {get(educationalProgramCharacteristic, EducationProgramCharacteristicFields.ANNOTATION, '')}
-            </Typography>
-          )}
+          <CKEditor
+            value={get(educationalProgramCharacteristic, EducationProgramCharacteristicFields.ANNOTATION, '')}
+            onBlur={this.handleChangeSKEEditorField(EducationProgramCharacteristicFields.ANNOTATION)}
+            toolbarContainerId="toolbar-container"
+            readOnly={!canEdit}
+          />
         </div>
       case 2:
         return (
@@ -661,11 +679,45 @@ class Characteristic extends React.Component<CharacteristicProps> {
 
   sendToCheck = () => this.props.actions.sendToCheck()
 
+  handleSave = (dowloadLink:string) => () => {
+    this.setFetchingTrue();
+    const fileLink = dowloadLink;
+
+    let tempLink = document.createElement('a');
+
+    tempLink.href = fileLink;
+
+    tempLink.setAttribute('target', '_blank');
+
+    document.body.appendChild(tempLink);
+    tempLink.click();
+    document.body.removeChild(tempLink);
+
+    this.setFetchingFalse();
+  }
+
+  setFetchingTrue = () => {
+    this.setState({
+        isFetching: true
+    })
+  };
+
+  setFetchingFalse = () => {
+    this.setState({
+        isFetching: false
+    })
+  };
+
+  handleUpdateMatrixTable = () => {
+    this.props.actions.getCompetenceMatrix(this.getEducationalProgramCharacteristicId())
+  }
+
   render() {
     //@ts-ignore
     const {classes} = this.props;
     const {educationalProgramCharacteristic, canEdit, statusInfo} = this.props;
-    const {activeStep} = this.state;
+    const {activeStep, isFetching} = this.state;
+    const educationalProgramCharacteristicId = this.getEducationalProgramCharacteristicId();
     const names = get(educationalProgramCharacteristic, EducationProgramCharacteristicFields.EDUCATION_PROGRAM, [])
       .reduce((items: any, item:any) => {
         if(!items.includes('"' + item.title + '"')) {
@@ -678,6 +730,16 @@ class Characteristic extends React.Component<CharacteristicProps> {
       <div className={classes.wrap}>
         <div className={classes.paperHeader}>
           <StatusPoint {...statusInfo} />
+          <div className={classes.dowloadFileButtonPosition}>
+            <Button onClick={this.handleSave(service.getDownloadFileGeneralCharacteristic(educationalProgramCharacteristicId))}>
+              Экспорт ОХ в word
+              {isFetching ? <CircularProgress size={20} style={{marginLeft: 10}} /> : <></>}
+            </Button>
+            <Button onClick={this.handleSave(service.getDownloadFileCompetenceMatrix(educationalProgramCharacteristicId))}>
+              Экспорт матрицы компетенций в Excel
+              {isFetching ? <CircularProgress size={20} style={{marginLeft: 10}} /> : <></>}
+            </Button>
+          </div>
           {canEdit ? (
             <Button
               variant="contained"
@@ -689,19 +751,20 @@ class Characteristic extends React.Component<CharacteristicProps> {
             </Button>
           ) : null}
         </div>
+
         <Paper className={classes.root}>
           <Stepper activeStep={activeStep}
                    orientation="vertical"
                    nonLinear
                    className={classes.stepper}
           >
-            {steps.map((value, index) => {
+            {steps.map(({label, link}, index) => {
               return (
                 <Step key={index}>
-                  <StepButton onClick={this.handleStep(index)}
+                  <StepButton onClick={() => this.handleStep(link)}
                               style={{textAlign: 'left'}}
                   >
-                    {value}
+                    {label}
                   </StepButton>
                 </Step>
               );
@@ -731,6 +794,10 @@ class Characteristic extends React.Component<CharacteristicProps> {
                 </div>
               </div>
             </Typography>
+
+            {activeStep === steps.length - 1 ? (
+              <Button style={{marginBottom: 10}} onClick={this.handleUpdateMatrixTable}><b>Обновить таблицу</b></Button>
+            ) : null}
 
             {this.renderContent()}
           </div>

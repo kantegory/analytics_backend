@@ -39,7 +39,7 @@ from .serializers import AcademicPlanSerializer, EvaluationToolForWorkProgramDif
     ZunCreateSaveSerializer, WorkProgramForIndividualRoutesSerializer, AcademicPlanShortSerializer, \
     WorkProgramChangeInDisciplineBlockModuleUpdateSerializer, \
     WorkProgramChangeInDisciplineBlockModuleForCRUDResponseSerializer, AcademicPlanSerializerForList, \
-    WorkProgramArchiveUpdateSerializer, EvaluationToolListSerializer, EvaluationToolDiffSerializer, EvaluationToolCopySerializer
+    WorkProgramArchiveUpdateSerializer, EvaluationToolListSerializer, EvaluationToolDiffSerializer, EvaluationToolCopySerializer, CompetenceWithStandardSerializer
 from .serializers import BibliographicReferenceSerializer, \
     WorkProgramBibliographicReferenceUpdateSerializer, \
     PrerequisitesOfWorkProgramCreateSerializer, EvaluationToolForWorkProgramSerializer, EvaluationToolCreateSerializer, \
@@ -168,10 +168,26 @@ class ZunManyViewSet(viewsets.ModelViewSet):
               "items": []
                 }
             }
+            OR
+            {
+            "workprogram_id": 1 - ссылка на РПД
+            "gh_id": 1 новое - ссылка на ОХ
+            "zun": [
+            {
+              "indicator_in_zun": 85,
+              "items": []
+            },
+            {
+              "indicator_in_zun": 85,
+              "items": []
+            }
+                ]
+            }
         """
-        aps = AcademicPlan.objects.filter(
-            academic_plan_in_field_of_study__general_characteristics_in_educational_program__id=int(
-                request.data.get('gh_id')))
+        if request.data.get('iap_id') is not None:
+            aps = AcademicPlan.objects.filter(academic_plan_in_field_of_study__id = int(request.data.get('iap_id')))
+        else:
+            aps = AcademicPlan.objects.filter(academic_plan_in_field_of_study__general_characteristics_in_educational_program__id=int(request.data.get('gh_id')))
         wp_in_fss = WorkProgramInFieldOfStudy.objects.filter(
             Q(work_program__id=int(request.data.get('workprogram_id')),
               work_program_change_in_discipline_block_module__discipline_block_module__descipline_block__academic_plan__in=aps) |
@@ -195,9 +211,16 @@ class ZunManyViewSet(viewsets.ModelViewSet):
               work_program_change_in_discipline_block_module__discipline_block_module__father_module__father_module__father_module__father_module__father_module__father_module__father_module__father_module__father_module__descipline_block__academic_plan__in=aps)
         ).distinct()
         for wp_in_fs in wp_in_fss:
-            serializer = self.get_serializer(data=request.data['zun'])
-            serializer.is_valid(raise_exception=True)
-            serializer.save(wp_in_fs=wp_in_fs)
+            zun_obj = request.data['zun']
+            if type(zun_obj) is list:
+                for zun in zun_obj:
+                    serializer = self.get_serializer(data=zun)
+                    serializer.is_valid(raise_exception=True)
+                    serializer.save(wp_in_fs=wp_in_fs)
+            else:
+                serializer = self.get_serializer(data=request.data['zun'])
+                serializer.is_valid(raise_exception=True)
+                serializer.save(wp_in_fs=wp_in_fs)
         return Response(status=status.HTTP_201_CREATED)
 
 
@@ -228,13 +251,53 @@ class ZunManyForAllGhViewSet(viewsets.ModelViewSet):
               "items": []
                 }
             }
+
+        OR
+            {
+            "workprogram_id": 1 - ссылка на РПД
+            "zun": [
+            {
+              "indicator_in_zun": 85,
+              "items": []
+            },
+            {
+              "indicator_in_zun": 85,
+              "items": []
+            }
+                ]
         """
         wp_in_fss = WorkProgramInFieldOfStudy.objects.filter(work_program__id=int(request.data.get('workprogram_id'))).distinct()
         for wp_in_fs in wp_in_fss:
-            serializer = self.get_serializer(data=request.data['zun'])
-            serializer.is_valid(raise_exception=True)
-            serializer.save(wp_in_fs=wp_in_fs)
+            zun_obj=request.data['zun']
+            print(type(zun_obj))
+            if type(zun_obj) is list:
+                for zun in zun_obj:
+                    serializer = self.get_serializer(data=zun)
+                    serializer.is_valid(raise_exception=True)
+                    serializer.save(wp_in_fs=wp_in_fs)
+            else:
+                serializer = self.get_serializer(data=request.data['zun'])
+                serializer.is_valid(raise_exception=True)
+                serializer.save(wp_in_fs=wp_in_fs)
         return Response(status=status.HTTP_201_CREATED)
+
+    def update(self, request, *args, **kwargs):
+        for_all = request.data.get("for_all")
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        if for_all:
+            wp = WorkProgram.objects.get(zuns_for_wp=instance.wp_in_fs)
+            Zun.objects.filter(wp_in_fs__work_program=wp, skills=instance.skills,
+                               attainments=instance.attainments,
+                               knowledge=instance.knowledge, indicator_in_zun__id=instance.indicator_in_zun.id).update(
+                skills=request.data["skills"], attainments=request.data["attainments"],
+                knowledge=request.data["knowledge"])
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+
+        else:
+            return Response({"message": "failed", "details": serializer.errors})
 
 
 
@@ -245,12 +308,66 @@ class CompetenceCreateView(generics.CreateAPIView):
 
 
 class CompetencesListView(generics.ListAPIView):
-    serializer_class = CompetenceSerializer
+    serializer_class = CompetenceWithStandardSerializer
     queryset = Competence.objects.all()
     filter_backends = [filters.SearchFilter, filters.OrderingFilter, DjangoFilterBackend]
     filterset_class = CompetenceFilter
     search_fields = ['name', 'number']
     permission_classes = [IsRpdDeveloperOrReadOnly]
+    ap_id = openapi.Parameter('ap_id', openapi.IN_QUERY,
+                              description="выводит все компетенции по айди Impmplementation-a входящие в связанный ОХ",
+                              type=openapi.TYPE_INTEGER)
+
+    in_standard = openapi.Parameter('in_standard', openapi.IN_QUERY,
+                              description="Выводит все ПК или компетенции, входящие в Образовательные стандарты",
+                              type=openapi.TYPE_BOOLEAN)
+
+    @swagger_auto_schema(
+        manual_parameters=[ap_id, in_standard])
+    def get(self, request, *args, **kwargs):
+        return self.list(request, *args, **kwargs)
+
+    def boolean(self, string):
+        if string.lower() in ["0", "no", "false"]:
+            response = False
+        if string.lower() in ["1", "yes", "true"]:
+            response = True
+        return response
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+
+        ap_id = self.request.GET.get('ap_id')
+        in_standard = self.boolean(self.request.GET.get('in_standard'))
+
+        if ap_id:
+            key_filter = Q(
+                group_key__group_of_pk__educational_standard__educational_standard_in_educational_program__educational_program__academic_plan__id=ap_id)
+            over_filter = Q(
+                group_over__group_of_pk__educational_standard__educational_standard_in_educational_program__educational_program__academic_plan__id=ap_id)
+            general_filter = Q(
+                group_general__group_of_pk__educational_standard__educational_standard_in_educational_program__educational_program__academic_plan__id=ap_id)
+            pk_filter = Q(pk_group__group_of_pk__general_characteristic__educational_program__academic_plan__id=ap_id)
+            queryset = queryset.filter(key_filter | over_filter | general_filter | pk_filter)
+
+        if in_standard:
+            key_filter = Q(group_key__group_of_pk__educational_standard__isnull=False)
+            over_filter = Q(group_over__group_of_pk__educational_standard__isnull=False)
+            general_filter = Q(
+                group_general__group_of_pk__educational_standard__isnull=False)
+            queryset = queryset.filter(key_filter | over_filter | general_filter)
+
+        queryset = queryset.filter().distinct()
+        queryset = self.filter_queryset(queryset.all())
+
+        page = self.paginate_queryset(queryset)
+
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
 
 class CompetenceListView(APIView):
@@ -715,7 +832,7 @@ class WorkProgramDetailsView(generics.RetrieveAPIView):
         except:
 
             newdata.update({"rating": False})
-        competences = Competence.objects.filter(
+        """competences = Competence.objects.filter(
             indicator_in_competencse__zun__wp_in_fs__work_program__id=self.kwargs['pk']).distinct()
         competences_dict = []
         for competence in competences:
@@ -739,17 +856,21 @@ class WorkProgramDetailsView(generics.RetrieveAPIView):
                 for item in items:
                     items_array.append({"id": item.id, "name": item.name})
                 # serializer = WorkProgramInFieldOfStudySerializerForCb(WorkProgramInFieldOfStudy.objects.get(zun_in_wp = zun.id))
-                queryset = ImplementationAcademicPlan.objects.filter(
-                    academic_plan__discipline_blocks_in_academic_plan__modules_in_discipline_block__change_blocks_of_work_programs_in_modules__zuns_for_cb__zun_in_wp__id=zun.id)
+                #queryset = ImplementationAcademicPlan.objects.filter(
+                #    academic_plan__discipline_blocks_in_academic_plan__modules_in_discipline_block__change_blocks_of_work_programs_in_modules__zuns_for_cb__zun_in_wp__id=zun.id)
+                modules = DisciplineBlockModule.objects.filter(
+                    change_blocks_of_work_programs_in_modules__zuns_for_cb__zun_in_wp__id=zun.id)
+                queryset = ImplementationAcademicPlan.get_all_imp_by_modules(modules=modules)
                 serializer = ImplementationAcademicPlanSerializer(queryset, many=True)
-                zuns_array.append({"id": zun.id, "knowledge": zun.knowledge, "skills": zun.skills,
-                                   "attainments": zun.attainments, "indicator": indicator,
-                                   "items": items_array, "educational_program": serializer.data,
-                                   "wp_in_fs": WorkProgramInFieldOfStudySerializerForCb(
-                                       WorkProgramInFieldOfStudy.objects.get(zun_in_wp=zun.id)).data["id"]})
+                if queryset.exists():
+                    zuns_array.append({"id": zun.id, "knowledge": zun.knowledge, "skills": zun.skills,
+                                       "attainments": zun.attainments, "indicator": indicator,
+                                       "items": items_array, "educational_program": serializer.data,
+                                       "wp_in_fs": WorkProgramInFieldOfStudySerializerForCb(
+                                           WorkProgramInFieldOfStudy.objects.get(zun_in_wp=zun.id)).data["id"]})
             competences_dict.append({"id": competence.id, "name": competence.name, "number": competence.number,
                                      "zuns": zuns_array})
-        newdata.update({"competences": competences_dict})
+        newdata.update({"competences": competences_dict})"""
         newdata = OrderedDict(newdata)
         return Response(newdata, status=status.HTTP_200_OK)
 
@@ -2066,11 +2187,13 @@ class AcademicPlanListAPIView(generics.ListAPIView):
     serializer_class = AcademicPlanSerializerForList
     queryset = AcademicPlan.objects.all()
     filter_backends = [filters.SearchFilter, filters.OrderingFilter, DjangoFilterBackend]
-    search_fields = ['academic_plan_in_field_of_study__qualification',
+    search_fields = ['id',
+                     'academic_plan_in_field_of_study__qualification',
                      'academic_plan_in_field_of_study__title',
                      'academic_plan_in_field_of_study__year',
                      'academic_plan_in_field_of_study__field_of_study__title',
-                     'academic_plan_in_field_of_study__field_of_study__number']
+                     'academic_plan_in_field_of_study__field_of_study__number',
+                     'ap_isu_id']
     ordering_fields = ['academic_plan_in_field_of_study__qualification',
                        'academic_plan_in_field_of_study__title',
                        'academic_plan_in_field_of_study__year',
@@ -2087,7 +2210,9 @@ class AcademicPlanListShortAPIView(generics.ListAPIView):
                      'academic_plan_in_field_of_study__title',
                      'academic_plan_in_field_of_study__year',
                      'academic_plan_in_field_of_study__field_of_study__title',
-                     'academic_plan_in_field_of_study__field_of_study__number']
+                     'academic_plan_in_field_of_study__field_of_study__number',
+                     'ap_isu_id',
+                     'id']
     ordering_fields = ['academic_plan_in_field_of_study__qualification',
                        'academic_plan_in_field_of_study__title',
                        'academic_plan_in_field_of_study__year',
@@ -2279,7 +2404,7 @@ class ZunUpdateView(generics.UpdateAPIView):
 
 
 @api_view(['POST'])
-@permission_classes((IsAdminUser,))
+@permission_classes((IsRpdDeveloperOrReadOnly,))
 def CloneWorkProgramm(request):
     """
     Апи для клонирования рабочей программы

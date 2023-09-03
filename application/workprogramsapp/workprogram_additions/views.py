@@ -9,6 +9,10 @@ from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 
 # Права доступа
+from rest_framework.status import HTTP_404_NOT_FOUND
+
+from gia_practice_app.GIA.models import GIA
+from gia_practice_app.Practice.models import Practice
 from workprogramsapp.permissions import IsRpdDeveloperOrReadOnly
 from .models import AdditionalMaterial, StructuralUnit, UserStructuralUnit
 # Сериализаторы
@@ -149,8 +153,8 @@ def CopyContentOfWorkProgram(request):
 
         # old_wp.delete()
         new_wp.save()
-        serializer = WorkProgramSerializer(new_wp, many=False)
-        return Response(serializer.data)
+        #serializer = WorkProgramSerializer(new_wp, many=False)
+        return Response(data={"copied"}, status=200)
     except:
         return Response(status=400)
 
@@ -228,6 +232,10 @@ def WorkProgramShortInfo(request, isu_id):
         work_program = WorkProgram.objects.get(discipline_code=str(isu_id))
         newdata.update(
             {"title": work_program.title})
+        newdata.update(
+            {"moodle": work_program.moodle_link})
+        newdata.update(
+            {"description": work_program.description})
         try:
             status = Expertise.objects.get(work_program=work_program).get_expertise_status_display()
             if not status:
@@ -240,6 +248,58 @@ def WorkProgramShortInfo(request, isu_id):
         return Response(newdata)
     except WorkProgram.DoesNotExist:
         raise Http404
+
+@api_view(['GET'])
+@permission_classes((IsAuthenticated,))
+def PracticeShortInfo(request, isu_id):
+    newdata = {}
+
+    try:
+        practice = Practice.objects.get(discipline_code=isu_id)
+        newdata.update(
+            {"title": practice.title})
+        newdata.update(
+            {"moodle": None})
+        newdata.update(
+            {"description": None})
+        try:
+            status = Expertise.objects.get(practice=practice).get_expertise_status_display()
+            if not status:
+                status = "В работе"
+            newdata.update(
+                {"expertise_status": status})
+        except Expertise.DoesNotExist:
+            newdata.update({"expertise_status": "В работе"})
+        newdata.update({"wp_url": f"https://op.itmo.ru/practice/{practice.id}"})
+        return Response(newdata)
+    except Practice.DoesNotExist:
+        raise Http404
+
+@api_view(['GET'])
+@permission_classes((IsAuthenticated,))
+def GIAShortInfo(request, isu_id):
+    newdata = {}
+
+    try:
+        gia = GIA.objects.get(discipline_code=isu_id)
+        newdata.update(
+            {"title": gia.title})
+        newdata.update(
+            {"moodle": None})
+        newdata.update(
+            {"description": None})
+        try:
+            status = Expertise.objects.get(gia=gia).get_expertise_status_display()
+            if not status:
+                status = "В работе"
+            newdata.update(
+                {"expertise_status": status})
+        except Expertise.DoesNotExist:
+            newdata.update({"expertise_status": "В работе"})
+        newdata.update({"wp_url": f"https://op.itmo.ru/gia/{gia.id}"})
+        return Response(newdata)
+    except GIA.DoesNotExist:
+        return Response({'status': 'gia not found'}, status=HTTP_404_NOT_FOUND)
 
 
 class WorkProgramItemsPrerequisitesView(generics.RetrieveAPIView):

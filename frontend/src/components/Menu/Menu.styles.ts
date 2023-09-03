@@ -6,7 +6,7 @@ export default (theme: Theme) => createStyles({
     width: 250,
     marginTop: 64,
     borderRight: '1px solid #f4f4f4',
-    zIndex: 100,
+    zIndex: '100 !important',
     height: 'calc(100% - 64px)',
     backgroundColor: '#f4f4f4'
   },
@@ -14,7 +14,7 @@ export default (theme: Theme) => createStyles({
     backgroundColor: '#f4f4f4'
   },
   menuList: {
-    padding: 0
+    paddingBottom: '80px !important',
   },
   menuItem: {
     // @ts-ignore

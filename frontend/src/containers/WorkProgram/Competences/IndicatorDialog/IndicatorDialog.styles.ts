@@ -1,9 +1,26 @@
 import {createStyles, makeStyles} from "@mui/styles";
-import {Theme} from "@mui/material";
 
-export const useStyles = makeStyles((theme: Theme) => createStyles({
+export const useStyles = makeStyles(() => createStyles({
   dialog: {
     padding: 20,
+  },
+  selectorWrap: {
+    width: '100%',
+    '& .MuiInputLabel-shrink': {
+      transform: 'translate(14px, -6.5px) scale(0.75) !important',
+    },
+    '& .MuiOutlinedInput-notchedOutline legend': {
+      width: '321px !important'
+    }
+  },
+  planSelectorWrap: {
+    width: '100%',
+    '& .MuiInputLabel-shrink': {
+      transform: 'translate(14px, -6.5px) scale(0.75) !important',
+    },
+    '& .MuiOutlinedInput-notchedOutline legend': {
+      width: '250px !important'
+    }
   },
   marginBottom30: {
     marginBottom: '30px !important'
@@ -18,15 +35,25 @@ export const useStyles = makeStyles((theme: Theme) => createStyles({
   chipsList: {
     display: 'flex',
     marginTop: '10px',
-    marginBottom: '30px',
+    marginBottom: '10px',
     flexWrap: 'wrap'
   },
   chip: {
-    marginRight: '10px',
-    marginBottom: '10px',
+    marginRight: '10px !important',
+    marginBottom: '10px !important',
     '& span': {
       whiteSpace: 'initial !important'
     }
+  },
+  indicatorDialiogInfoMassage: {
+    margin: '20px 0 !important',
+  },
+  switcher: {
+    marginBottom: '20px',
+  },
+  deleteIndicatorIcon: {
+    position: "absolute",
+    cursor: 'pointer',
   },
   info: {
     marginTop: '10px',
@@ -37,6 +64,5 @@ export const useStyles = makeStyles((theme: Theme) => createStyles({
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 20,
   }
 }));

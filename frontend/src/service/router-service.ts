@@ -63,7 +63,7 @@ export default class RouterService {
     }
 
     getSignInRoute = () => {
-        return SEPARATOR + SIGN_IN;
+        return SEPARATOR + SIGN_IN + SEPARATOR + '*';
     };
 
     getFoldersRoute = () => {
@@ -160,7 +160,7 @@ export default class RouterService {
     };
 
     getEducationalProgramCharacteristic = () => {
-        return SEPARATOR + EDUCATIONAL_PROGRAM + SEPARATOR + ':id';
+        return SEPARATOR + EDUCATIONAL_PROGRAM + SEPARATOR + ':id' + SEPARATOR + '*';
     };
 
     getEducationalProgramCharacteristicLink = (id: number) => {
@@ -283,6 +283,10 @@ export default class RouterService {
 
     getTrajectoryPlanDetailRoute = () => {
         return SEPARATOR + INDIVIDUAL_TRAJECTORIES + SEPARATOR + EDUCATIONAL_PLAN + SEPARATOR + ':id';
+    };
+
+    getCharacteristicSubSectionLink = (id: number, sectionNumber: number) => {
+        return this.getEducationalProgramCharacteristicLink(id) + SEPARATOR + sectionNumber;
     };
 
     getWorkProgramLink = (id: number) => {

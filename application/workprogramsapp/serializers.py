@@ -1,4 +1,5 @@
 from django.contrib.auth.models import Group
+from django.db.models import Q
 from rest_framework import serializers
 from rest_framework.fields import BooleanField
 
@@ -9,6 +10,7 @@ from onlinecourse.serializers import OnlineCourseSerializer
 # from gia_practice_app.GIA.serializers import GIASerializer, GIAPrimitiveSerializer
 # from gia_practice_app.Practice.serializers import PracticeSerializer, PracticePrimitiveSerializer
 from .disciplineblockmodules.ze_module_logic import recursion_module, recursion_module_per_ze
+from .educational_program.educational_standart.models import EducationalStandard
 from .expertise.common_serializers import ShortExpertiseSerializer
 from .expertise.models import Expertise
 from .models import WorkProgram, Indicator, Competence, OutcomesOfWorkProgram, DisciplineSection, Topic, EvaluationTool, \
@@ -34,7 +36,7 @@ class AcademicPlanUpdateLogSerializer(serializers.ModelSerializer):
 class AcademicPlanUpdateConfigurationSerializer(serializers.ModelSerializer):
     class Meta:
         model = AcademicPlanUpdateConfiguration
-        fields = ['id', 'academic_plan_id', 'academic_plan_title', 'updated_date_time', 'updates_enabled']
+        fields = ['id', 'academic_plan_id', 'academic_plan_title', 'updated_date_time', 'updates_enabled', 'over_23']
 
 
 class AcademicPlanUpdateConfigurationEditSerializer(serializers.ModelSerializer):
@@ -55,6 +57,30 @@ class IndicatorSerializer(serializers.ModelSerializer):
     class Meta:
         model = Indicator
         fields = ['id', 'number', 'name', 'competence']
+
+
+class EducationalStandardListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EducationalStandard
+        fields = ['id', 'name', 'standard_date']
+
+
+class CompetenceWithStandardSerializer(serializers.ModelSerializer):
+    """Сериализатор Компетенций"""
+    educational_standard = serializers.SerializerMethodField()
+
+    def get_educational_standard(self, instance):
+        key_filter = Q(group_of_key_competences__competence_in_group_of_key_competences__competence=instance)
+        over_filter = Q(
+            group_of_over_prof_competences__competence_in_group_of_over_prof_competences__competence=instance)
+        general_filter = Q(
+            group_of_general_prof_competences__competence_in_group_of_general_prof_competences__competence=instance)
+        return EducationalStandardListSerializer(
+            instance=EducationalStandard.objects.filter(key_filter | over_filter | general_filter).distinct(), many=True).data
+
+    class Meta:
+        model = Competence
+        fields = ['id', 'number', 'name', 'educational_standard']
 
 
 class CompetenceSerializer(serializers.ModelSerializer):
@@ -861,14 +887,16 @@ class AcademicPlanSerializer(serializers.ModelSerializer):
         # except KeyError:
         #     data["can_edit"] = False
         # print(instance.academic_plan_in_field_of_study.filter()[0].editors)
+        editors = []
+        if instance.academic_plan_in_field_of_study.filter().exists():
+            editors = instance.academic_plan_in_field_of_study.filter()[0].editors.all()
         data["laboriousness"] = sum(
             [block["laboriousness"] if block["name"] != "Блок 4. Факультативные модули (дисциплины)" else 0 for block in
              data["discipline_blocks_in_academic_plan"]])
         if instance.on_check == 'on_check' and not bool(
                 self.context['request'].user.groups.filter(name="expertise_master")):
             data["can_edit"] = False
-        elif self.context['request'].user in instance.academic_plan_in_field_of_study.filter()[0].editors.all() and \
-                instance.on_check != 'verified':
+        elif self.context['request'].user in editors and instance.on_check != 'verified':
             data["can_edit"] = True
         elif self.context['request'].user.is_staff or bool(
                 self.context['request'].user.groups.filter(name="expertise_master")):
@@ -910,9 +938,26 @@ class AcademicPlanForRepresentationSerializer(serializers.ModelSerializer):
 
 
 class AcademicPlanCreateSerializer(serializers.ModelSerializer):
+    fos_pk = serializers.IntegerField(source="academic_plan_in_field_of_study.field_of_study.id", write_only=True)
+
+    def create(self, validated_data):
+        try:
+            ap_in_fs = validated_data.pop('academic_plan_in_field_of_study')
+            fos_pk = ap_in_fs['field_of_study']['id']
+            ap = AcademicPlan.objects.create(**validated_data)
+            imp = ImplementationAcademicPlan.objects.create(academic_plan=ap,
+                                                            title=validated_data.pop('educational_profile'),
+                                                            qualification=validated_data.pop('qualification'))
+            imp.field_of_study.add(FieldOfStudy.objects.get(id=fos_pk))
+        except KeyError:
+            ap = AcademicPlan.objects.create(**validated_data)
+            imp = ImplementationAcademicPlan.objects.create(academic_plan=ap)
+        return ap
+
     class Meta:
         model = AcademicPlan
-        fields = ['id', 'educational_profile', 'number', 'approval_date', 'year', 'education_form', 'author']
+        fields = ['id', 'educational_profile', 'number', 'approval_date', 'year', 'education_form', 'author',
+                  'fos_pk', 'qualification']
 
 
 class WorkProgramShortForExperiseSerializer(serializers.ModelSerializer):
@@ -1063,6 +1108,14 @@ class WorkProgramInFieldOfStudySerializer(serializers.ModelSerializer):
 #         model = Expertise
 #         fields = ['expertise_status']
 
+class WorkProgramInFieldOfStudyWithAPSerializer(serializers.ModelSerializer):
+    #work_program = WorkProgramShortForExperiseSerializer
+    work_program_change_in_discipline_block_module = WorkProgramChangeInDisciplineBlockModuleForWPinFSSerializer(
+        many=False)
+
+    class Meta:
+        model = WorkProgramInFieldOfStudy
+        fields = ['id', 'work_program_change_in_discipline_block_module']
 
 class WorkProgramSerializer(serializers.ModelSerializer):
     """Сериализатор рабочих программ"""

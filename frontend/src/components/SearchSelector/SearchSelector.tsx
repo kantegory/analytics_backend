@@ -82,7 +82,7 @@ class SearchSelector extends React.Component<SearchSelectorProps> {
     };
 
     setItem = (value: ReactText, label: string) => (e: React.MouseEvent) => {
-        this.setState({searchText: label});
+        this.setState({searchText: this.props.cleanLabelAfterSelect ? '' : label});
         this.props.changeItem(value, label);
     }
 
@@ -116,6 +116,7 @@ class SearchSelector extends React.Component<SearchSelectorProps> {
                                disabled={disabled}
                                error={Boolean(errorMessage)}
                                helperText={errorMessage}
+                               autoComplete="off"
                     />
                     <AutoSizer style={{width: '100%'}}>
                         {({width}: any) => (

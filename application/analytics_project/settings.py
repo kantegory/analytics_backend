@@ -29,7 +29,7 @@ environ.Env.read_env()  # reading .env file
 SECRET_KEY = env('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-#DEBUG = env('DEBUG') == True
+# DEBUG = env('DEBUG') == True
 DEBUG = True
 
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 100000
@@ -67,6 +67,8 @@ INSTALLED_APPS = [
     'drf_yasg2',
     'model_clone',
     'selection_of_keywords_for_rpd',
+    'streams_app',
+    'cachalot',
     # 'django_extensions',
     # 'ckeditor',
     # 'ckeditor_uploader',
@@ -309,6 +311,7 @@ DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 URL_FRONT = env("URL_FRONT")
 AP_FILE_ROUTE = env('AP_FILE_ROUTE')
 ISU_URL_UPDATERS = env('ISU_URL_UPDATERS')
+LAN_TOKEN = env("LAN_TOKEN")
 sentry_sdk.init(
     dsn=env("SENTRY_URL"),
     integrations=[
@@ -324,3 +327,59 @@ sentry_sdk.init(
     # django.contrib.auth) you may enable sending PII data.
     send_default_pii=True
 )
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.memcached.MemcachedCache',
+        'LOCATION': 'cache:11211',
+    }
+}
+
+if os.environ['DEBUG'] == True:
+    LOGGING = {
+        'version': 1,
+        'formatters': {
+            'standard': {
+                'format': '%(asctime)s [%(levelname)s]- %(message)s'}
+
+        },
+        'handlers': {
+            'django_error': {
+                'level': 'DEBUG',
+                'class': 'logging.StreamHandler',
+                'formatter': 'standard'
+            },
+            'info': {
+                'level': 'DEBUG',
+                'class': 'logging.StreamHandler',
+                'formatter': 'standard'
+            },
+            'console': {
+                'level': 'DEBUG',
+                'class': 'logging.StreamHandler',
+                'formatter': 'standard'
+            }
+        },
+        'loggers': {
+            'info': {
+                'handlers': ['info', "console"],
+                'level': 'DEBUG',
+                'propagate': True
+            },
+            'django': {
+                'handlers': ['console'],
+                'level': 'INFO',
+                'propagate': True,
+            },
+            'django.request': {
+                'handlers': ['django_error', 'console'],
+                'level': 'DEBUG',
+                'propagate': True,
+            },
+            'django.db.backends': {
+                'handlers': ['console'],
+                'level': 'DEBUG',
+            }
+        },
+    }
+

@@ -18,6 +18,10 @@ class AcademicPlanUpdateService extends AnalyticsService {
         return this.post('api/isu_v2/academic-plans/update', {});
     }
 
+    updateAcademicPlansFrom2023() {
+        return this.post('api/isu_v2/academic-plans_2023/update ', {});
+    }
+
     getAcademicPlansExcel() {
         return this.get('api/isu_v2/academic-plans/excel');
     }
@@ -28,6 +32,7 @@ class AcademicPlanUpdateService extends AnalyticsService {
         formData.append(UpdatedAcademicPlanFields.ACADEMIC_PLAN_ID, academicPlanConfiguration[UpdatedAcademicPlanFields.ACADEMIC_PLAN_ID]);
         formData.append(UpdatedAcademicPlanFields.ACADEMIC_PLAN_TITLE, academicPlanConfiguration[UpdatedAcademicPlanFields.ACADEMIC_PLAN_TITLE]);
         formData.append(UpdatedAcademicPlanFields.UPDATES_ENABLED, academicPlanConfiguration[UpdatedAcademicPlanFields.UPDATES_ENABLED]);
+        formData.append(UpdatedAcademicPlanFields.OVER_23, academicPlanConfiguration[UpdatedAcademicPlanFields.OVER_23]);
 
         return this.post(`api/isu_v2/academic-plans/configuration/create`, formData);
 
@@ -37,7 +42,14 @@ class AcademicPlanUpdateService extends AnalyticsService {
         const formData = new FormData();
         formData.append(UpdatedAcademicPlanFields.UPDATES_ENABLED, academicPlanConfiguration[UpdatedAcademicPlanFields.UPDATES_ENABLED]);
 
-        return this.put(`api/isu_v2/academic-plans/configuration/update/${academicPlanConfiguration[UpdatedAcademicPlanFields.ID]}`, formData);
+        return this.patch(`api/isu_v2/academic-plans/configuration/update/${academicPlanConfiguration[UpdatedAcademicPlanFields.ID]}`, formData);
+    }
+
+    updateAcademicPlanOver23(academicPlanConfiguration: any) {
+        const formData = new FormData();
+        formData.append(UpdatedAcademicPlanFields.OVER_23, academicPlanConfiguration[UpdatedAcademicPlanFields.OVER_23]);
+
+        return this.patch(`api/isu_v2/academic-plans/configuration/update/${academicPlanConfiguration[UpdatedAcademicPlanFields.ID]}`, formData);
     }
 
     getSchedulerConfiguration() {

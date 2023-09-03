@@ -29,9 +29,15 @@ const changeCurrentPage = createAction('COMPETENCE_CHANGE_CURRENT_PAGE');
 const changeAllCount = createAction('COMPETENCE_CHANGE_ALL_COUNT');
 const changeSorting = createAction('COMPETENCE_CHANGE_SORTING');
 
+const changeFilterOnlyWithStandard = createAction('CHANGE_FILTER_ONLY_WITH_STANDARD');
+const changeFilterAcademicPlan = createAction('CHANGE_FILTER_ACADEMIC_PLAN');
+
+
 const actions: CompetenceActions = {
     getIndicatorsDependsCompetence,
     createIndicator,
+    changeFilterOnlyWithStandard,
+    changeFilterAcademicPlan,
     changeCodeQuery,
     changeIndicator,
     deleteIndicator,

@@ -11,15 +11,14 @@ import actions from '../../../actions'
 import {useDispatch} from 'react-redux'
 import Tooltip from "@mui/material/Tooltip/Tooltip";
 import MenuItem from "@mui/material/MenuItem";
+import FormControlLabel from "@mui/material/FormControlLabel";
+import Checkbox from "@mui/material/Checkbox";
 
 interface IndicatorsProps {
-    workProgramId: number;
+    workProgramId?: number;
+    practiceId?: number;
     isOpen: boolean;
     defaultCompetence?: {
-        value: number;
-        label: string;
-    };
-    defaultIndicator?: {
         value: number;
         label: string;
     };
@@ -32,17 +31,20 @@ interface IndicatorsProps {
     onDeleteZun: (id: number) => void;
 }
 
-export default ({isOpen, handleClose, defaultCompetence, defaultIndicator, workProgramId, addedIndicators, onDeleteZun}: IndicatorsProps) => {
+export default ({isOpen, handleClose, defaultCompetence, practiceId, workProgramId, addedIndicators, onDeleteZun}: IndicatorsProps) => {
     const classes = useStyles();
     const dispatch = useDispatch();
+    const [skipReload, setSkipReload] = useState(true);
     const [competence, setCompetence] = useState<{ value: number; label: string }>({value: 0, label: ''});
-    const [indicator, setIndicator] = useState<{ value: number; label: string }>({value: 0, label: ''});
+    const [indicators, setIndicators] = useState<{ value: number; label: string }[]>(addedIndicators);
+
     const [onlyCurrentGh, setOnlyCurrentGh] = useState(true);
-    const addIndicator = (value: number, label: string) => {
-        setIndicator({
-            value,
-            label
-        })
+    const addIndicator = (value: number|string, label: string) => {
+        if (typeof value === 'string' || indicators.find((indicator) => indicator.value === value)) return
+        setIndicators([
+          ...indicators,
+          {value, label}
+        ])
     };
 
     const close = () => {
@@ -51,8 +53,17 @@ export default ({isOpen, handleClose, defaultCompetence, defaultIndicator, workP
     };
 
     const removeIndicator = (value: number) => {
-        onDeleteZun(value);
-        dispatch(actions.deleteZun(value));
+        // если индикатор был ранее добавлен, нужно удалить его на беке
+        if (addedIndicators.find((item: any) => item.value === value)) {
+            onDeleteZun(value);
+            dispatch(actions.deleteZun({
+                practice_id: practiceId,
+                id: value,
+                skipReload,
+            }));
+        }
+
+        setIndicators(indicators.filter((indicator) => indicator.value !== value))
     };
 
     const addCompetence = (value: number, label: string) => {
@@ -64,21 +75,18 @@ export default ({isOpen, handleClose, defaultCompetence, defaultIndicator, workP
 
     const saveZun = useCallback(() => {
         dispatch(actions.saveZun({
-            indicator: indicator.value,
+            indicators: indicators,
             workprogram_id: workProgramId,
+            practice_id: practiceId,
             onlyCurrentGh: onlyCurrentGh,
+            skipReload,
         }));
         close()
-    }, [indicator, competence, onlyCurrentGh]);
+    }, [indicators, competence, onlyCurrentGh, skipReload]);
 
-    const disableButton = useMemo(() => (indicator.value === 0 || competence.value === 0),
-        [indicator, competence]
+    const disableButton = useMemo(() => (indicators.length === 0 || competence.value === 0),
+        [indicators, competence]
     );
-
-
-    useEffect(() => {
-        setIndicator({value: 0, label: ''})
-    }, [competence]);
 
     useEffect(() => {
         if (defaultCompetence) {
@@ -86,11 +94,11 @@ export default ({isOpen, handleClose, defaultCompetence, defaultIndicator, workP
         }
     }, [defaultCompetence]);
 
-    useEffect(() => {
-        if (defaultIndicator) {
-            setIndicator(defaultIndicator)
-        }
-    }, [defaultIndicator]);
+    // useEffect(() => {
+    //     if (defaultIndicator) {
+    //         setIndicators(defaultIndicator)
+    //     }
+    // }, [defaultIndicator]);
 
     const selectOptions = [
         {
@@ -123,13 +131,14 @@ export default ({isOpen, handleClose, defaultCompetence, defaultIndicator, workP
             />
             <IndicatorSelector
                 onChange={addIndicator}
-                value={0}
                 label="Индикатор"
                 competenceId={competence.value}
-                disabled={competence.value === 0 || Boolean(defaultIndicator)}
+                disabled={competence.value === 0}
+                value={0}
+                cleanLabelAfterSelect
             />
             <div className={classes.chipsList}>
-                {addedIndicators.map(item => (
+                {indicators.map(item => (
                     <Tooltip title={item.label}>
                     <Chip key={`indicator-${item.value}`} className={classes.chip} onDelete={() => removeIndicator(item.value)}
                           label={`${item.label.slice(0, 30)}...`}/>
@@ -149,6 +158,11 @@ export default ({isOpen, handleClose, defaultCompetence, defaultIndicator, workP
                     </MenuItem>
                 )}
             </Select>
+            <FormControlLabel
+              style={{marginTop: 10}}
+              control={<Checkbox checked={skipReload} onChange={(e, checked) => setSkipReload(checked)} />}
+              label={<b style={{fontSize: 16}}>Не перезагружать страницу после добавления индикатора (изменения отобразятся после перезагрузки страницы вручную)</b>}
+            />
             <DialogActions className={classes.actions}>
                 <Button onClick={close}
                         variant="text">

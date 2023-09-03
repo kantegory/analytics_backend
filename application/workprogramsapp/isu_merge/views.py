@@ -4,21 +4,24 @@ from typing import Dict
 
 import pandas
 from django.conf import settings
+from django.db.models import Count
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters
 from rest_framework import permissions
 from rest_framework import status
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.generics import ListAPIView, RetrieveAPIView, CreateAPIView, UpdateAPIView
-from rest_framework.permissions import IsAdminUser
+from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from gia_practice_app.GIA.models import GIA
 from gia_practice_app.Practice.models import Practice
 from workprogramsapp.isu_merge.academic_plan_headers import process_headers
-from workprogramsapp.isu_merge.academic_plan_update.academic_plan_excel_creator import AcademicPlanExcelCreator
+from workprogramsapp.isu_merge.academic_plan_update_2023.academic_plan_excel_creator import AcademicPlanExcelCreator
+from workprogramsapp.isu_merge.academic_plan_update_2023.academic_plan_modules_updater import process_modules
 from workprogramsapp.isu_merge.academic_plan_update.academic_plan_update_processor import AcademicPlanUpdateProcessor
-from workprogramsapp.isu_merge.academic_plan_update.isu_service import IsuService, IsuUser
+from workprogramsapp.isu_merge.academic_plan_update_2023.isu_service import IsuService, IsuUser
 from workprogramsapp.isu_merge.filterset import HistoryFilter
 from workprogramsapp.isu_merge.post_to_isu.ap_to_isu import ap_isu_generate_dict
 from workprogramsapp.isu_merge.post_to_isu.updaters_isu_logic import post_wp_to_isu, post_practice_to_isu, \
@@ -27,17 +30,26 @@ from workprogramsapp.isu_merge.serializers import IsuHistoryListViewSerializer
 from workprogramsapp.models import WorkProgramIdStrUpForIsu, FieldOfStudy, WorkProgram, AcademicPlan, \
     ImplementationAcademicPlan, DisciplineBlock, DisciplineBlockModule, WorkProgramChangeInDisciplineBlockModule, \
     WorkProgramInFieldOfStudy, Zun, AcademicPlanUpdateLog, AcademicPlanUpdateSchedulerConfiguration, \
-    AcademicPlanUpdateConfiguration, IsuObjectsSendLogger
+    AcademicPlanUpdateConfiguration, IsuObjectsSendLogger, DisciplineBlockModuleInIsu
 from workprogramsapp.permissions import IsExpertiseMasterStrict
 from workprogramsapp.serializers import AcademicPlanUpdateLogSerializer, AcademicPlanUpdateConfigurationSerializer, \
     AcademicPlanUpdateSchedulerConfigurationSerializer
 from workprogramsapp.workprogram_additions.models import StructuralUnit
 
+from workprogramsapp.isu_merge.academic_plan_update_2023.academic_plan_update_processor \
+    import AcademicPlanUpdateProcessor as AcademicPlanUpdateProcessor_2023
 
 class UpdateAcademicPlansView(APIView):
 
     def post(self, request):
         updater = AcademicPlanUpdateProcessor()
+        updater.update_academic_plans()
+        return Response(status=200)
+
+class UpdateAcademicPlans2023View(APIView):
+
+    def post(self, request):
+        updater = AcademicPlanUpdateProcessor_2023()
         updater.update_academic_plans()
         return Response(status=200)
 
@@ -963,3 +975,46 @@ class SendGIAToISU(APIView):
         else:
             status_response = 500
             return Response(data={"error": "error when creating gia"}, status=status_response)
+
+
+class UpdateModulesRelationships(APIView):
+
+    def get(self, request):
+        isu_service = IsuService(
+            IsuUser(
+                settings.ISU["ISU_CLIENT_ID"],
+                settings.ISU["ISU_CLIENT_SECRET"]
+            )
+        )
+        modules = isu_service.get_modules()
+        modules_updated = process_modules(modules)
+
+        return Response(data={"plans_created"}, status=200)
+
+
+@api_view(['GET'])
+@permission_classes((IsAuthenticated,))
+def IsuModulesDuplicates(request):
+    isu_modules = DisciplineBlockModuleInIsu.objects.values('isu_id').annotate(Count('id')).order_by().filter(
+        id__count__gt=1)
+    modules_to_append = {}
+    for isu_module in isu_modules:
+        duplicate = DisciplineBlockModuleInIsu.objects.filter(isu_id=isu_module["isu_id"])
+        duplicate_module = duplicate.first().module
+        if duplicate.count() == duplicate.filter(module=duplicate_module).count():
+            print(duplicate)
+        else:
+            module_id = duplicate.first().isu_id
+            modules_to_append[module_id] = []
+            duplicate_list = []
+            for d in duplicate:
+                imp = ImplementationAcademicPlan.objects.get(academic_plan=d.academic_plan)
+                duplicate_list.append(
+                    {
+                        "isu_id": d.isu_id,
+                        "our_id": d.module.id,
+                        "ap_id": imp.ap_isu_id
+                    }
+                )
+            modules_to_append[module_id] = duplicate_list
+    return Response(data=modules_to_append,status=200)

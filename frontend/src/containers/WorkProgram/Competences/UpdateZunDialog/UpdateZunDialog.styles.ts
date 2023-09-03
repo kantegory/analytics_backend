@@ -12,13 +12,25 @@ export const useStyles = makeStyles((theme: Theme) => createStyles({
     marginTop: '10px'
   },
   title: {
-    padding: 0,
-    marginBottom: '30px'
+    padding: '0px !important',
+    marginBottom: '10px !important',
   },
   footer: {
     display: 'flex',
     justifyContent: 'flex-end',
     alignItems: 'center',
-    marginTop: 20,
-  }
+  },
+  chipsList: {
+    display: 'flex',
+    marginTop: '10px',
+    marginBottom: '10px',
+    flexWrap: 'wrap'
+  },
+  chip: {
+    marginRight: '10px !important',
+    marginBottom: '10px !important',
+    '& span': {
+      whiteSpace: 'initial !important'
+    }
+  },
 }));

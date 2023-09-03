@@ -15,6 +15,7 @@ import {
   getEducationalProgramCharacteristic,
   getSortingMode
 } from "./getters";
+import generalActions from "../../layout/actions";
 
 const service = new Service();
 
@@ -175,17 +176,22 @@ const saveZun = createLogic({
         dispatch(actions.fetchingTrue({destination: fetchingTypes.SAVE_ZUN}));
 
         const competenceMatrixId = getEducationalProgramCharacteristicId(getState());
-        const {indicator, workprogram_id, onlyCurrentGh} = action.payload;
+        const {indicators, workprogram_id, onlyCurrentGh, practice_id, skipReload} = action.payload;
 
         if (onlyCurrentGh) {
           service.saveZUN({
             gh_id: competenceMatrixId,
-            indicator,
+            indicators,
             workprogram_id,
+            practice_id,
           })
               .then(() => {
-                dispatch(educationalPlanActions.getCompetenceMatrix(competenceMatrixId));
-                dispatch(actions.fetchingSuccess());
+                if (!skipReload) {
+                  dispatch(educationalPlanActions.getCompetenceMatrix(competenceMatrixId));
+                  dispatch(actions.fetchingSuccess());
+                } else {
+                  dispatch(generalActions.fetchingSuccess(['Вы добавили индикатор, но не перезагрузили страницу. Перезагрузите страницу, чтобы увидеть изменения']));
+                }
               })
               .catch((err) => {
                 dispatch(actions.fetchingFailed(err));
@@ -196,12 +202,17 @@ const saveZun = createLogic({
               });
         } else {
           service.saveZunAllGh({
-            indicator,
-            workprogram_id
+            indicators,
+            workprogram_id,
+            practice_id,
           })
               .then(() => {
-                dispatch(educationalPlanActions.getCompetenceMatrix(competenceMatrixId));
-                dispatch(actions.fetchingSuccess());
+                if (!skipReload) {
+                  dispatch(educationalPlanActions.getCompetenceMatrix(competenceMatrixId));
+                  dispatch(actions.fetchingSuccess());
+                } else {
+                  dispatch(generalActions.fetchingSuccess(['Вы добавили индикатор, но не перезагрузили страницу. Перезагрузите страницу, чтобы увидеть изменения']));
+                }
               })
               .catch((err) => {
                 dispatch(actions.fetchingFailed(err));
@@ -221,8 +232,9 @@ const deleteZun = createLogic({
     dispatch(actions.fetchingTrue({destination: fetchingTypes.DELETE_ZUN}));
 
     const competenceMatrixId = getEducationalProgramCharacteristicId(getState());
+    const {id, practice_id, skipReload} = action.payload;
 
-    service.deleteZUN(action.payload)
+    service.deleteZUN(id, practice_id)
       .then(() => {
         dispatch(actions.fetchingSuccess(['Индикатор успешно удален']));
       })
@@ -231,7 +243,9 @@ const deleteZun = createLogic({
       })
       .then(() => {
         dispatch(actions.fetchingFalse({destination: fetchingTypes.DELETE_ZUN}));
-        dispatch(educationalPlanActions.getCompetenceMatrix(competenceMatrixId));
+        if (!skipReload) {
+          dispatch(educationalPlanActions.getCompetenceMatrix(competenceMatrixId));
+        }
         return done();
       })
   }

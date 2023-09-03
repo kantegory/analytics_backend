@@ -1,5 +1,6 @@
-import React, {SyntheticEvent} from 'react';
+import React from 'react';
 import debounce from 'lodash/debounce';
+import moment from 'moment';
 import get from 'lodash/get';
 import Scrollbars from "react-custom-scrollbars-2";
 import Switch from "@mui/material/Switch";
@@ -7,6 +8,9 @@ import AddIcon from "@mui/icons-material/Add";
 import TextField from '@mui/material/TextField';
 import Fab from "@mui/material/Fab";
 import Paper from '@mui/material/Paper';
+import Tabs from '@mui/material/Tabs';
+import Tab from '@mui/material/Tab';
+import CheckIcon from "@mui/icons-material/CheckOutlined";
 
 import Typography from "@mui/material/Typography";
 
@@ -37,14 +41,13 @@ import connect from './AcademicPlanUpdate.connect';
 import styles from './AcademicPlanUpdate.styles';
 import {AcademicPlanUpdateLogFields, SchedulerConfigurationFields, UpdatedAcademicPlanFields} from "./enum";
 import CreateModal from "./CreateModal/CreateModal";
-import {WorkProgramGeneralFields} from "../WorkProgram/enum";
 import Pagination from "@mui/lab/Pagination";
+import {FULL_DATE_FORMAT_WITH_TIME} from "../../common/utils";
 
 class AcademicPlanUpdate extends React.Component<AcademicPlanUpdateProps> {
     state = {
-        isUpdatedPlansShown: false
+        currentTab: "1"
     }
-
 
     componentDidMount() {
         this.props.actions.getAcademicPlanUpdateLogs();
@@ -60,18 +63,22 @@ class AcademicPlanUpdate extends React.Component<AcademicPlanUpdateProps> {
         this.props.actions.updateAcademicPlans();
     }
 
+    updateAcademicPlansFrom2023 = () => {
+        this.props.actions.updateAcademicPlansFrom2023();
+    }
+
     getAcademicPlansExcel = () => {
         this.props.actions.getAcademicPlansExcel();
     }
 
-    showUpdatedPlans = () => {
+    showUpdatedPlans = (e: any, value: any) => {
         this.setState({
-            isUpdatedPlansShown: !this.state.isUpdatedPlansShown
+            currentTab: value,
         });
     }
 
     changeSearch = debounce((value: string): void => {
-        if (this.state.isUpdatedPlansShown) {
+        if (this.state.currentTab) {
             this.props.actions.updatedPlansChangeSearchQuery(value);
             this.props.actions.updatedPlansChangeCurrentPage(1);
             this.props.actions.getUpdatedAcademicPlans()
@@ -83,7 +90,7 @@ class AcademicPlanUpdate extends React.Component<AcademicPlanUpdateProps> {
     }, 300);
 
     handleChangePage = (event: any, page: number) => {
-        if(this.state.isUpdatedPlansShown){
+        if(this.state.currentTab){
             this.props.actions.updatedPlansChangeCurrentPage(page);
             this.props.actions.getUpdatedAcademicPlans()
         }else {
@@ -93,7 +100,7 @@ class AcademicPlanUpdate extends React.Component<AcademicPlanUpdateProps> {
     }
 
     changeSorting = (field: string) => (mode: SortingType) => {
-        if (this.state.isUpdatedPlansShown) {
+        if (this.state.currentTab) {
             this.props.actions.updatedPlansChangeSorting({field: mode === '' ? '' : field, mode});
             this.props.actions.getUpdatedAcademicPlans();
         } else {
@@ -102,11 +109,18 @@ class AcademicPlanUpdate extends React.Component<AcademicPlanUpdateProps> {
         }
     }
 
-    changeUpdateStatus = (id: number, updatesEnabled: boolean) => (event: SyntheticEvent): void => {
+    changeUpdateStatus = (id: number, updatesEnabled: boolean) => (): void => {
         updatesEnabled = !updatesEnabled
         this.props.actions.updateAcademicPlanConfiguration({
             [UpdatedAcademicPlanFields.ID]: id,
             [UpdatedAcademicPlanFields.UPDATES_ENABLED]: updatesEnabled
+        });
+    };
+
+    changeOver23Status = (id: number, over23: boolean) => (): void => {
+        this.props.actions.updateAcademicPlanOver23({
+            [UpdatedAcademicPlanFields.ID]: id,
+            [UpdatedAcademicPlanFields.OVER_23]: !over23
         });
     };
 
@@ -186,34 +200,6 @@ class AcademicPlanUpdate extends React.Component<AcademicPlanUpdateProps> {
                                 <MenuItem value="30">30 дней</MenuItem>
                             </Select>
                         </FormControl>
-                        <Button
-                            onClick={this.showUpdatedPlans}
-                            variant="contained"
-                            color="primary"
-                            disableElevation
-                            className={classes.Btn}
-                        >
-                            {!this.state.isUpdatedPlansShown ? 'Обновляемые планы' : 'Журнал обновлений'}
-
-                        </Button>
-                        <Button
-                            onClick={this.updateAcademicPlans}
-                            variant="contained"
-                            color="primary"
-                            disableElevation
-                            className={classes.Btn}
-                        >
-                            Синхронизировать
-                        </Button>
-                        <Button
-                            onClick={this.getAcademicPlansExcel}
-                            variant="contained"
-                            color="primary"
-                            disableElevation
-                            className={classes.Btn}
-                        >
-                            Получить excel
-                        </Button>
                         <TextField placeholder="Поиск"
                                    variant="outlined"
                                    InputProps={{
@@ -227,47 +213,89 @@ class AcademicPlanUpdate extends React.Component<AcademicPlanUpdateProps> {
                     </div>
                 </div>
 
+                <div className={classes.buttonsWrap}>
+                    <Tabs value={this.state.currentTab}
+                          indicatorColor="primary"
+                          onChange={this.showUpdatedPlans}
+                    >
+                        <Tab value="1" label="Журнал обновлений" />
+                        <Tab value="2" label="Обновляемые планы" />
+
+                    </Tabs>
+
+                    <Button
+                      onClick={this.updateAcademicPlansFrom2023}
+                      variant="outlined"
+                      color="primary"
+                      disableElevation
+                      className={classes.button}
+                      style={{marginRight: 20, marginLeft: 'auto'}}
+                    >
+                        Синхронизировать планы с 2023 года
+                    </Button>
+                    <Button
+                      onClick={this.updateAcademicPlans}
+                      variant="outlined"
+                      color="primary"
+                      disableElevation
+                      className={classes.button}
+                      style={{marginRight: 20}}
+                    >
+                        Синхронизировать
+                    </Button>
+                    <Button
+                      onClick={this.getAcademicPlansExcel}
+                      variant="outlined"
+                      color="primary"
+                      disableElevation
+                      className={classes.button}
+                    >
+                        Получить excel
+                    </Button>
+                </div>
+
+
                 <Scrollbars>
                     <div className={classes.tableWrap}>
-                        {!this.state.isUpdatedPlansShown ? <Table stickyHeader size='small'>
+                        {this.state.currentTab === '2' ? <Table stickyHeader size='small'>
                                 <TableHead>
                                     <TableRow>
-                                        <TableCell>
-                                            Id учебного плана
+                                        <TableCell className={classes.idPlanCell}>
+                                            Id УП
                                             <SortingButton
                                                 changeMode={this.changeSorting('academic_plan_id')}
                                                 mode={logsSortingField === 'academic_plan_id' ? logsSortingMode : ''}
                                             />
                                         </TableCell>
-                                        <TableCell>
+                                        <TableCell className={classes.headCell}>
                                             Объект обновления
                                             <SortingButton
                                                 changeMode={this.changeSorting('object_type')}
                                                 mode={logsSortingField === 'object_type' ? logsSortingMode : ''}
                                             />
                                         </TableCell>
-                                        <TableCell>
+                                        <TableCell className={classes.headCell}>
                                             Обновленное поле
                                             <SortingButton
                                                 changeMode={this.changeSorting('field_name')}
                                                 mode={logsSortingField === 'field_name' ? logsSortingMode : ''}
                                             />
                                         </TableCell>
-                                        <TableCell>
+                                        <TableCell className={classes.headCell}>
                                             Старое значение
                                             <SortingButton
                                                 changeMode={this.changeSorting('old_value')}
                                                 mode={logsSortingField === 'old_value' ? logsSortingMode : ''}
                                             />
                                         </TableCell>
-                                        <TableCell>
+                                        <TableCell className={classes.headCell}>
                                             Новое значение
                                             <SortingButton
                                                 changeMode={this.changeSorting('new_value')}
                                                 mode={logsSortingField === 'new_value' ? logsSortingMode : ''}
                                             />
                                         </TableCell>
-                                        <TableCell>
+                                        <TableCell className={classes.headCell}>
                                             Дата обновления
                                             <SortingButton
                                                 changeMode={this.changeSorting('updated_date_time')}
@@ -279,12 +307,12 @@ class AcademicPlanUpdate extends React.Component<AcademicPlanUpdateProps> {
                                 <TableBody>
                                     {academicPlanUpdateLogs.map(log =>
                                         <TableRow key={log[AcademicPlanUpdateLogFields.ID]}>
-                                            <TableCell>{log[AcademicPlanUpdateLogFields.ACADEMIC_PLAN_ID]}</TableCell>
+                                            <TableCell className={classes.idPlanCell}>{log[AcademicPlanUpdateLogFields.ACADEMIC_PLAN_ID]}</TableCell>
                                             <TableCell>{log[AcademicPlanUpdateLogFields.OBJECT_TYPE]}</TableCell>
                                             <TableCell>{log[AcademicPlanUpdateLogFields.FIELD_NAME]}</TableCell>
                                             <TableCell>{log[AcademicPlanUpdateLogFields.OLD_VALUE]}</TableCell>
                                             <TableCell>{log[AcademicPlanUpdateLogFields.NEW_VALUE]}</TableCell>
-                                            <TableCell>{log[AcademicPlanUpdateLogFields.UPDATED_DATE_TIME]}</TableCell>
+                                            <TableCell>{moment(log[AcademicPlanUpdateLogFields.UPDATED_DATE_TIME]).format(FULL_DATE_FORMAT_WITH_TIME)}</TableCell>
                                         </TableRow>
                                     )}
                                 </TableBody>
@@ -294,8 +322,8 @@ class AcademicPlanUpdate extends React.Component<AcademicPlanUpdateProps> {
                             <Table stickyHeader size='small'>
                                 <TableHead>
                                     <TableRow>
-                                        <TableCell>
-                                            Id учебного плана
+                                        <TableCell className={classes.idPlanCell}>
+                                            Id УП
                                             <SortingButton
                                                 changeMode={this.changeSorting('academic_plan_id')}
                                                 mode={updatedPlansSortingField === 'academic_plan_id' ? updatedPlansSortingMode : ''}
@@ -322,21 +350,29 @@ class AcademicPlanUpdate extends React.Component<AcademicPlanUpdateProps> {
                                                 mode={updatedPlansSortingField === 'updates_enabled' ? updatedPlansSortingMode : ''}
                                             />
                                         </TableCell>
+                                        <TableCell>
+                                            С 2023 года
+                                        </TableCell>
                                     </TableRow>
                                 </TableHead>
                                 <TableBody>
                                     {updatedAcademicPlans.map(updatedPlan =>
                                         <TableRow key={updatedPlan[UpdatedAcademicPlanFields.ID]}>
-                                            <TableCell>{updatedPlan[UpdatedAcademicPlanFields.ACADEMIC_PLAN_ID]}</TableCell>
+                                            <TableCell className={classes.idPlanCell}>{updatedPlan[UpdatedAcademicPlanFields.ACADEMIC_PLAN_ID]}</TableCell>
                                             <TableCell>{updatedPlan[UpdatedAcademicPlanFields.ACADEMIC_PLAN_TITLE]}</TableCell>
-                                            <TableCell>{updatedPlan[UpdatedAcademicPlanFields.UPDATED_DATE_TIME]}</TableCell>
-                                            <TableCell>{
+                                            <TableCell>{moment(updatedPlan[UpdatedAcademicPlanFields.UPDATED_DATE_TIME]).format(FULL_DATE_FORMAT_WITH_TIME)}</TableCell>
+                                            <TableCell>
                                                 <Switch checked={updatedPlan[UpdatedAcademicPlanFields.UPDATES_ENABLED]}
                                                         onChange={this.changeUpdateStatus(updatedPlan[UpdatedAcademicPlanFields.ID], updatedPlan[UpdatedAcademicPlanFields.UPDATES_ENABLED])}
                                                         color="primary"
                                                 />
-
-                                            }</TableCell>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Switch checked={updatedPlan[UpdatedAcademicPlanFields.OVER_23]}
+                                                        onChange={this.changeOver23Status(updatedPlan[UpdatedAcademicPlanFields.ID], updatedPlan[UpdatedAcademicPlanFields.OVER_23])}
+                                                        color="primary"
+                                                />
+                                            </TableCell>
                                         </TableRow>
                                     )}
                                 </TableBody>
@@ -347,20 +383,20 @@ class AcademicPlanUpdate extends React.Component<AcademicPlanUpdateProps> {
                 </Scrollbars>
 
                 <div className={classes.footer}>
-                    {this.state.isUpdatedPlansShown ?
-                      <Pagination count={updatedPlansAllCount}
-                                  page={updatedPlansCurrentPage - 1}
+                    {this.state.currentTab ?
+                      <Pagination count={Math.ceil(updatedPlansAllCount / 10)}
+                                  page={updatedPlansCurrentPage}
                                   onChange={this.handleChangePage}
                                   color="primary"
                       />
                         :
-                      <Pagination count={logsAllCount}
-                                  page={logsCurrentPage - 1}
+                      <Pagination count={Math.ceil(logsAllCount / 10)}
+                                  page={logsCurrentPage}
                                   onChange={this.handleChangePage}
                                   color="primary"
                       />
                     }
-                    {this.state.isUpdatedPlansShown &&
+                    {this.state.currentTab &&
                         <Fab color="secondary"
                              classes={{
                                  root: classes.addIcon

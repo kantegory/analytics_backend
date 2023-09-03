@@ -28,6 +28,19 @@ class WorkProgramService extends AnalyticsService{
         return this.get(`/api/toolsinworkprogram/${id}`);
     }
 
+    deleteIndicators(ids: number[]){
+        return this.post(`/api/competence/zun_many_remove`, {zuns_to_delete: ids});
+    }
+
+    getApWithCompetencesAndIndicatorsToWp(id: string, year: number|null, ap: number|null, imp:number|null){
+        const filtersString = `${year ? `year=${year}&` : ''}${ap ? `ap_id=${ap}` : ''}${imp ? `imp=${imp}` : ''}`
+        return this.get(`/api/competence/get_all_ap_with_competences_and_indicators_to_wp/${id}?${filtersString}`);
+    }
+
+    getAllCompetencesAndIndicatorsForWp(id: string){
+        return this.get(`/api/competence/get_all_competences_and_indicators_for_wp/${id}`);
+    }
+
     cloneWorkProgram(id: string){
         const formData = new FormData();
 
@@ -329,26 +342,39 @@ class WorkProgramService extends AnalyticsService{
         });
     }
 
-    saveZUN({indicator, plans, results, knowledge, skills, attainments}: any, wpId: any){
+    saveZUN({indicators}: any, wpId: number|undefined, practiceId: number|undefined){
         return this.post(`/api/zun/many_create_for_all_gh/`,{
             workprogram_id: wpId,
+            practice_id: practiceId,
             // wpa_in_fss: plans,
-            zun: {
-                indicator_in_zun: indicator,
-                items: results,
-                knowledge,
-                skills,
-                attainments,
-            },
+            zun: indicators,
         });
     }
 
-    updateZUN({knowledge, skills, attainments, zunId}: any, wpId: any){
+    saveZUNforThisEP({indicators, plans}: any, wpId: number|undefined, practiceId: number|undefined){
+        if (practiceId) {
+            return this.post(`api/zun/practice-many/`,{
+                iap_id: plans,
+                zun: indicators,
+                practice_id: practiceId,
+            });
+        }
+
+        return this.post(`/api/zun/many_create/`,{
+            workprogram_id: wpId,
+            iap_id: plans,
+            zun: indicators,
+        });
+    }
+
+    updateZUN({knowledge, skills, attainments, zunId, updateAllZuns, items}: any, wpId: any){
         return this.patch(`/api/zun/many_create_for_all_gh/${zunId}/`,{
             workprogram_id: wpId,
             knowledge,
             skills,
             attainments,
+            for_all: updateAllZuns,
+            items,
         });
     }
 

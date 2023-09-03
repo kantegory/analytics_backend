@@ -284,3 +284,33 @@ export enum literatureSource {
     EBSCO = 'EBSCO',
     ANALITYCS = 'ANALITYCS',
 }
+
+export const findIn = [
+    {
+        value: 'title',
+        label: 'название',
+    },
+    {
+        value: 'description',
+        label: 'описание',
+    },
+    {
+        value: 'discipline',
+        label: 'название дисциплины',
+    },
+    {
+        value: 'section',
+        label: 'название секции',
+    },
+]
+
+export const yesNoOptions = [
+    {
+        value: 'yes',
+        label: 'да',
+    },
+    {
+        value: 'no',
+        label: 'нет',
+    },
+]

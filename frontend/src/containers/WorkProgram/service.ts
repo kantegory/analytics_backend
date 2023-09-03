@@ -235,6 +235,10 @@ class WorkProgramService extends AnalyticsService{
         });
     }
 
+    copyEvaluationTool(data: any) {
+        return this.post('/api/tools/actions/copy', data)
+    }
+
     changeIntermediateCertification(evaluationTool: any){
         const id = evaluationTool[IntermediateCertificationFields.ID];
 

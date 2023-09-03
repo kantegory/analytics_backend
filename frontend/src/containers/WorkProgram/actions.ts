@@ -44,6 +44,7 @@ const setWorkProgramEvaluationTools = createAction('SET_WORK_PROGRAM_EVALUATION_
 const deleteEvaluationTool = createAction('WORK_PROGRAM_DELETE_EVALUATION_TOOL');
 const addEvaluationTool = createAction('WORK_PROGRAM_ADD_EVALUATION_TOOL');
 const changeEvaluationTool = createAction('WORK_PROGRAM_CHANGE_EVALUATION_TOOL');
+const copyEvaluationTool = createAction('WORK_PROGRAM_COPY_EVALUATION_TOOL');
 
 const deleteIntermediateCertification = createAction('WORK_PROGRAM_DELETE_INTERMEDIATE_CERTIFICATION');
 const addIntermediateCertification = createAction('WORK_PROGRAM_ADD_INTERMEDIATE_CERTIFICATION');
@@ -114,6 +115,7 @@ const actions: WorkProgramActions = {
     deleteEvaluationTool,
     addEvaluationTool,
     changeEvaluationTool,
+    copyEvaluationTool,
 
     deletePrerequisite,
     addPrerequisite,

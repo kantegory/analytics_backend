@@ -28,6 +28,8 @@ export enum fields {
 
     CREATE_NEW_INTERMEDIATE_CERTIFICATION = 'CREATE_NEW_INTERMEDIATE_CERTIFICATION',
     SHOW_INTERMEDIATE_CERTIFICATION_DESCRIPTION = 'SHOW_INTERMEDIATE_CERTIFICATION_DESCRIPTION',
+
+    COPY_EVALUATION_TOOL = 'COPY_EVALUATION_TOOL',
 }
 
 export enum WorkProgramGeneralFields {
@@ -136,6 +138,7 @@ export enum fetchingTypes {
 
     ADD_EVALUATION_TOOL = 'ADD_EVALUATION_TOOL',
     CHANGE_EVALUATION_TOOL = 'CHANGE_EVALUATION_TOOL',
+    COPY_EVALUATION_TOOL = 'COPY_EVALUATION_TOOL',
     DELETE_EVALUATION_TOOL = 'DELETE_EVALUATION_TOOL',
     GET_EVALUATION_TOOL = 'GET_EVALUATION_TOOL',
 
@@ -176,6 +179,7 @@ export enum EvaluationToolFields {
     CHECK_POINT = 'check_point',
     SECTIONS = 'descipline_sections',
     SEMESTER = 'semester',
+    CAN_CLONE = 'is_available_for_clone',
 }
 
 export enum IntermediateCertificationFields {

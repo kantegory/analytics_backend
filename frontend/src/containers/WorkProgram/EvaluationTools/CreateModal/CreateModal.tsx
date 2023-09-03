@@ -59,6 +59,7 @@ class CreateModal extends React.PureComponent<CreateModalProps> {
             [EvaluationToolFields.DEADLINE]: 1,
             [EvaluationToolFields.CHECK_POINT]: false,
             [EvaluationToolFields.SEMESTER]: '1',
+            [EvaluationToolFields.CAN_CLONE]: false,
         }
     };
 
@@ -80,6 +81,7 @@ class CreateModal extends React.PureComponent<CreateModalProps> {
                     [EvaluationToolFields.TYPE]: get(evaluationTool, EvaluationToolFields.TYPE, ''),
                     [EvaluationToolFields.CHECK_POINT]: get(evaluationTool, EvaluationToolFields.CHECK_POINT, false),
                     [EvaluationToolFields.SEMESTER]: get(evaluationTool, EvaluationToolFields.SEMESTER, '1'),
+                    [EvaluationToolFields.CAN_CLONE]: get(evaluationTool, EvaluationToolFields.CAN_CLONE, false),
                 }
             });
         }
@@ -150,6 +152,17 @@ class CreateModal extends React.PureComponent<CreateModalProps> {
             evaluationTool: {
                 ...evaluationTool,
                 [EvaluationToolFields.CHECK_POINT]: checked
+            }
+        })
+    }
+
+    changeCanClone = (event: React.ChangeEvent<HTMLInputElement>, checked: boolean) => {
+        const {evaluationTool} = this.state;
+
+        this.setState({
+            evaluationTool: {
+                ...evaluationTool,
+                [EvaluationToolFields.CAN_CLONE]: checked
             }
         })
     }
@@ -232,7 +245,7 @@ class CreateModal extends React.PureComponent<CreateModalProps> {
                                                        value={evaluationTool[EvaluationToolFields.NAME]}
                                             />
 
-                                            <FormControl error={this.hasError(EvaluationToolFields.SECTIONS)} className={classes.sectionSelector}>
+<FormControl error={this.hasError(EvaluationToolFields.SECTIONS)} className={classes.sectionSelector}>
                                                 <InputLabel shrink id="section-label">
                                                     Раздел *
                                                 </InputLabel>
@@ -361,6 +374,12 @@ class CreateModal extends React.PureComponent<CreateModalProps> {
                                                     onChange={this.changeDeadline}
                                                 />
                                             </div>
+
+                                            <FormControlLabel
+                                                control={<Checkbox checked={evaluationTool[EvaluationToolFields.CAN_CLONE]} onChange={this.changeCanClone}/>}
+                                                label="Оценочное средство доступно для копирования"
+                                                className={classes.marginBottom30}
+                                            />
                                         </>
                                     )}
                                 </AutoSizer>

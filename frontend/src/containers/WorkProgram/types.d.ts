@@ -65,6 +65,8 @@ export interface WorkProgramActions {
     deleteEvaluationTool: any;
     addEvaluationTool: any;
     changeEvaluationTool: any;
+    copyEvaluationTool: any;
+
     getWorkProgramEvaluationTool: any;
     setWorkProgramEvaluationTool: any;
 
@@ -196,6 +198,7 @@ export type EvaluationToolType = {
     [EvaluationToolFields.MAX]: number;
     [EvaluationToolFields.SEMESTER]: string;
     [EvaluationToolFields.SECTIONS]: Array<SectionType>;
+    [EvaluationToolFields.CAN_CLONE]: boolean;
 }
 
 export type IntermediateCertificationType = {

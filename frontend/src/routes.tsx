@@ -1,4 +1,4 @@
- import React from "react";
+import React from "react";
 import {BrowserRouter as Router, Route, Routes} from 'react-router-dom';
 
 import AuthRoute from './hoc/AuthRoute'
@@ -70,8 +70,9 @@ import FinalCertification from "./containers/FinalCertification";
 import FinalCertificationList from "./containers/FinalCertification/CertificationList";
 import AcademicPlanUpdate from "./containers/AcademicPlanUpdate";
 
- import EmailSuccessPage from "./containers/EmailSuccessPage";
- import EmailFailPage from "./containers/EmailFailPage";
+import EmailSuccessPage from "./containers/EmailSuccessPage";
+import EmailFailPage from "./containers/EmailFailPage";
+import EvaluationToolsBank from "./containers/EvaluationToolsBank";
 
 const routerService = RouterService.factory();
 
@@ -115,6 +116,7 @@ export default () => (
               <Route path={routerService.getEducationPlanInDirectionRoute()} element={<AuthRoute><EducationPlanInDirection /></AuthRoute>} />
               <Route path={routerService.getWorkProgramListRoute()} element={<AuthRoute><WorkProgramList /></AuthRoute>} />
               <Route path={routerService.getWorkProgramRoute()} element={<AuthRoute><WorkProgram /></AuthRoute>} />
+              <Route path={routerService.getEvaluationToolsBankRoute()} element={<AuthRoute><EvaluationToolsBank /></AuthRoute>} />
               <Route path={routerService.getExpertiseRoute()} element={<AuthRoute><Expertise /></AuthRoute>} />
               <Route path={routerService.getExpertisesRoute()} element={<AuthRoute><Expertises /></AuthRoute>} />
               <Route path={routerService.getEducationPlanRoute()} element={<AuthRoute><EducationalPlan /></AuthRoute>} />

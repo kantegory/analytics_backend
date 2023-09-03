@@ -19,6 +19,7 @@ import SettingsIcon from "@mui/icons-material/MoreVert";
 import IconButton from "@mui/material/IconButton";
 import DeleteIcon from "@mui/icons-material/DeleteOutlined";
 import EditIcon from "@mui/icons-material/EditOutlined";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import EyeIcon from '@mui/icons-material/VisibilityOutlined';
 import CheckIcon from "@mui/icons-material/CheckOutlined";
 import Switch from "@mui/material/Switch";
@@ -29,6 +30,7 @@ import {appRouter} from '../../../service/router-service'
 import DescriptionModal from "./DescriptionModal";
 import EvaluationCertificationTotalList from "../EvaluationCertificationTotalList";
 import CreateModal from "./CreateModal";
+import CopyModal from "./CopyModal";
 
 import {SixthStepProps} from './types';
 import {EvaluationToolFields, fields, WorkProgramGeneralFields, workProgramSectionFields} from "../enum";
@@ -78,6 +80,11 @@ class EvaluationTools extends React.PureComponent<SixthStepProps> {
         this.props.actions.openDialog({dialogType: fields.CREATE_NEW_EVALUATION_TOOLS, data: evaluationTool});
         this.handleCloseItemMenu();
     };
+
+    handleClickCopy = (evaluationTool: EvaluationToolType) => () => {
+        this.props.actions.openDialog({dialogType: fields.COPY_EVALUATION_TOOL, data: evaluationTool});
+        this.handleCloseItemMenu();
+    }
 
     handleClickShowDescription = (id: any) => () => {
         //@ts-ignore
@@ -222,6 +229,15 @@ class EvaluationTools extends React.PureComponent<SixthStepProps> {
                                                     Смотреть описание
                                                 </MenuItem>
 
+                                                <MenuItem
+                                                    onClick={this.handleClickCopy(evaluationTool)}
+                                                    disabled={!evaluationTool[EvaluationToolFields.CAN_CLONE]}
+                                                    title={!evaluationTool[EvaluationToolFields.CAN_CLONE] ? 'Данное оценочное средство нельзя скопировать' : ''}
+                                                >
+                                                    <ContentCopyIcon className={classes.menuIcon}/>
+                                                    Копировать
+                                                </MenuItem>
+
                                                 <MenuItem onClick={this.handleClickEdit(evaluationTool)}>
                                                     <EditIcon className={classes.menuIcon}/>
                                                     Редактировать
@@ -269,6 +285,7 @@ class EvaluationTools extends React.PureComponent<SixthStepProps> {
                 }
 
                 {isCanEdit && <CreateModal />}
+                {isCanEdit && <CopyModal />}
 
                 <DescriptionModal />
             </div>

@@ -58,6 +58,30 @@ const changeEvaluationTool = createLogic({
     }
 });
 
+const copyEvaluationTool = createLogic({
+    type: workProgramActions.copyEvaluationTool.type,
+    latest: true,
+    process({getState, action}: any, dispatch, done) {
+        const evaluationTool = action.payload;
+
+        dispatch(actions.fetchingTrue({destination: fetchingTypes.COPY_EVALUATION_TOOL}));
+
+        service.copyEvaluationTool(evaluationTool)
+            .then((res) => {
+                dispatch(workProgramActions.getWorkProgramEvaluationTools());
+                // @ts-ignore
+                dispatch(actions.fetchingSuccess());
+                dispatch(workProgramActions.closeDialog(fields.COPY_EVALUATION_TOOL));
+            })
+            .catch((err) => {
+                dispatch(actions.fetchingFailed(err));
+            })
+            .then(() => {
+                dispatch(actions.fetchingFalse({destination: fetchingTypes.COPY_EVALUATION_TOOL}));
+                return done();
+            });
+    }
+});
 
 const deleteEvaluationTool = createLogic({
     type: workProgramActions.deleteEvaluationTool.type,
@@ -107,6 +131,7 @@ const getWorkProgramEvaluationTool = createLogic({
 
 export default [
     changeEvaluationTool,
+    copyEvaluationTool,
     addEvaluationTool,
     deleteEvaluationTool,
     getWorkProgramEvaluationTool,

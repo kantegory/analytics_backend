@@ -20,6 +20,7 @@ const INDICATORS = 'indicators';
 const EDUCATIONAL_PLAN_IN_DIRECTION = 'educational-plans-in-direction';
 const EDUCATIONAL_PROGRAM = 'educational-program';
 const WORK_PROGRAM_LIST = 'work-programs';
+const BANK = 'bank';
 const PROFESSIONS = 'professions';
 const ROLES = 'roles';
 const SKILLS = 'skills';
@@ -236,6 +237,10 @@ export default class RouterService {
         return SEPARATOR + WORK_PROGRAM_LIST;
     };
 
+    getEvaluationToolsBankRoute = () => {
+        return SEPARATOR + BANK;
+    };
+    
     getEducationPlanRoute = () => {
         return SEPARATOR + EDUCATIONAL_PLAN;
     };

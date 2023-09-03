@@ -160,6 +160,86 @@ class EvaluationToolSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
+class EvaluationToolDiffSerializer(serializers.ModelSerializer):
+    """
+        Сериализатор для получения дочернего оценочного средства с отличающимися полями
+    """
+
+    type = serializers.SerializerMethodField()
+    name = serializers.SerializerMethodField()
+    description = serializers.SerializerMethodField()
+    check_point = serializers.SerializerMethodField()
+    deadline = serializers.SerializerMethodField()
+    semester = serializers.SerializerMethodField()
+    min = serializers.SerializerMethodField()
+    max = serializers.SerializerMethodField()
+    evaluation_criteria = serializers.SerializerMethodField()
+
+    def get_type(self, instance):
+        if instance.parent or instance.type:
+            return instance.type or instance.parent.type
+        else:
+            return None
+
+    def get_name(self, instance):
+        if instance.parent or instance.name:
+            return instance.name or instance.parent.name
+        else:
+            return None
+
+    def get_description(self, instance):
+        if instance.parent or instance.description:
+            return instance.description or instance.parent.description
+        else:
+            return None
+
+    def get_check_point(self, instance):
+        if instance.parent or instance.check_point:
+            return instance.check_point or instance.parent.check_point
+        else:
+            return None
+
+    def get_deadline(self, instance):
+        if instance.parent or instance.deadline:
+            return instance.deadline or instance.parent.deadline
+        else:
+            return None
+
+    def get_semester(self, instance):
+        if instance.parent or instance.semester:
+            return instance.semester or instance.parent.semester
+        else:
+            return None
+
+    def get_min(self, instance):
+        if instance.parent or instance.min:
+            return instance.min or instance.parent.min
+        else:
+            return None
+
+    def get_max(self, instance):
+        if instance.parent or instance.max:
+            return instance.max or instance.parent.max
+        else:
+            return None
+
+    def get_evaluation_criteria(self, instance):
+        if instance.parent or instance.evaluation_criteria:
+            return instance.evaluation_criteria or instance.parent.evaluation_criteria
+        else:
+            return None
+
+    class Meta:
+        model = EvaluationTool
+        fields = '__all__'
+
+
+class EvaluationToolCopySerializer(serializers.Serializer):
+    tool = serializers.IntegerField()
+    discipline_section = serializers.IntegerField()
+    full_copy = serializers.BooleanField(default=True)
+
+
 class EvaluationToolForOutcomsSerializer(serializers.ModelSerializer):
     """Сериализатор ФОСов"""
 
@@ -269,7 +349,7 @@ class BibliographicReferenceSerializer(serializers.ModelSerializer):
 class DisciplineSectionSerializer(serializers.ModelSerializer):
     """Сериализатор Разделов"""
     topics = TopicSerializer(many=True)
-    evaluation_tools = EvaluationToolSerializer(many=True)
+    evaluation_tools = EvaluationToolDiffSerializer(many=True)
 
     class Meta:
         model = DisciplineSection
@@ -415,6 +495,10 @@ class EvaluationToolForWorkProgramSerializer(serializers.ModelSerializer):
         model = EvaluationTool
         fields = ['id', 'type', 'name', 'description', 'check_point', 'deadline', 'min', 'max', 'descipline_sections',
                   'semester', 'evaluation_criteria']
+
+
+class EvaluationToolForWorkProgramDiffSerializer(EvaluationToolDiffSerializer):
+    descipline_sections = DisciplineSectionForEvaluationToolsSerializer(many=True, source='evaluation_tools')
 
 
 class EvaluationToolCreateSerializer(serializers.ModelSerializer):

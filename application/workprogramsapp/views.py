@@ -32,14 +32,14 @@ from .notifications.models import UserNotification
 # Права доступа
 from .permissions import IsOwnerOrReadOnly, IsRpdDeveloperOrReadOnly, IsDisciplineBlockModuleEditor, \
     IsOwnerOrDodWorkerOrReadOnly, IsAcademicPlanDeveloper, IsBlockModuleEditor
-from .serializers import AcademicPlanSerializer, ImplementationAcademicPlanSerializer, \
+from .serializers import AcademicPlanSerializer, EvaluationToolForWorkProgramDiffSerializer, ImplementationAcademicPlanSerializer, \
     ImplementationAcademicPlanCreateSerializer, AcademicPlanCreateSerializer, \
     WorkProgramChangeInDisciplineBlockModuleSerializer, DisciplineBlockModuleSerializer, \
     WorkProgramInFieldOfStudySerializer, ZunSerializer, WorkProgramInFieldOfStudyCreateSerializer, ZunCreateSerializer, \
     ZunCreateSaveSerializer, WorkProgramForIndividualRoutesSerializer, AcademicPlanShortSerializer, \
     WorkProgramChangeInDisciplineBlockModuleUpdateSerializer, \
     WorkProgramChangeInDisciplineBlockModuleForCRUDResponseSerializer, AcademicPlanSerializerForList, \
-    WorkProgramArchiveUpdateSerializer, EvaluationToolListSerializer
+    WorkProgramArchiveUpdateSerializer, EvaluationToolListSerializer, EvaluationToolDiffSerializer, EvaluationToolCopySerializer
 from .serializers import BibliographicReferenceSerializer, \
     WorkProgramBibliographicReferenceUpdateSerializer, \
     PrerequisitesOfWorkProgramCreateSerializer, EvaluationToolForWorkProgramSerializer, EvaluationToolCreateSerializer, \
@@ -53,6 +53,7 @@ from .serializers import OutcomesOfWorkProgramCreateSerializer, СertificationEv
 from .serializers import TopicSerializer, SectionSerializer, TopicCreateSerializer
 from .serializers import WorkProgramSerializer, WorkProgramEditorsUpdateSerializer
 from .workprogram_additions.models import StructuralUnit, UserStructuralUnit
+from workprogramsapp.filters import EvaluationToolsBankFilterSet
 
 """"Удалены старые views с использованием джанго рендеринга"""
 """Блок реализации API"""
@@ -851,14 +852,52 @@ class EvaluationToolListAPI(generics.ListCreateAPIView):
     permission_classes = [IsRpdDeveloperOrReadOnly]
 
 
+class EvaluationToolsBankAPI(generics.ListAPIView):
+    """
+    API endpoint that represents a list of Evaluation Tools.
+    """
+    queryset = EvaluationTool.objects.filter(is_available_for_clone=True)
+    serializer_class = EvaluationToolListSerializer
+    permission_classes = [IsRpdDeveloperOrReadOnly]
+    filter_class = EvaluationToolsBankFilterSet
+
+
 class EvaluationToolDetailAPI(generics.RetrieveUpdateDestroyAPIView):
     """
     API endpoint that represents a single Evaluation Tool.
     """
     queryset = EvaluationTool.objects.all()
-    serializer_class = EvaluationToolCreateSerializer
+    serializer_class = EvaluationToolDiffSerializer
     permission_classes = [IsRpdDeveloperOrReadOnly]
 
+
+class EvaluationToolCopyAPI(generics.GenericAPIView):
+    permission_classes = [IsRpdDeveloperOrReadOnly]
+    serializer_class = EvaluationToolCopySerializer
+
+    def post(self, request):
+        data = self.serializer_class(request.data).data
+
+        # попробуем вытащить оценочное средство и создать его копию
+        try:
+            copied_tool = EvaluationTool.objects.get(id=data['tool']).clone_evaluation_tool(full_clone=data.get('full_clone', False))
+        except EvaluationTool.DoesNotExist:
+            return Response({ "detail": "Оценочное средство с таким id не существует" }, status=status.HTTP_404_NOT_FOUND)
+
+        # попробуем вытащить секцию дисциплины, к которой планируется привязать оценочное средство
+        try:
+            discipline_section = DisciplineSection.objects.get(id=data['discipline_section'])
+        except DisciplineSection.DoesNotExist:
+            return Response({ "detail": "Раздел дисциплины с таким id не существует" }, status=status.HTTP_404_NOT_FOUND)
+
+        # если из метода копирования вернулся пустой ответ, значит, что такое оценочное средство нельзя копировать
+        if not copied_tool:
+            return Response({ "detail": "Данное оценочное средство нельзя скопировать" }, status=status.HTTP_400_BAD_REQUEST)
+
+        # если всё прошло успешно, мы можем добавить скопированное оценочное средство в соответствующую секцию
+        discipline_section.evaluation_tools.add(copied_tool)
+
+        return Response({ "detail": "Оценочное средство успешно скопировано", "tool": copied_tool.pk })
 
 class СertificationEvaluationToolListAPI(generics.ListCreateAPIView):
     """
@@ -1346,9 +1385,9 @@ class BibliographicReferenceInWorkProgramList(generics.ListAPIView):
 
 
 class EvaluationToolInWorkProgramList(generics.ListAPIView):
-    serializer_class = EvaluationToolForWorkProgramSerializer
+    serializer_class = EvaluationToolForWorkProgramDiffSerializer
     permission_classes = [IsRpdDeveloperOrReadOnly]
-    queryset = EvaluationTool
+    queryset = EvaluationTool.objects.all()
 
     def list(self, request, **kwargs):
         """
@@ -1357,9 +1396,9 @@ class EvaluationToolInWorkProgramList(generics.ListAPIView):
         try:
             queryset = EvaluationTool.objects.filter(evaluation_tools__in=DisciplineSection.objects.filter(
                 work_program__id=self.kwargs['workprogram_id'])).distinct()
-            serializer = EvaluationToolForWorkProgramSerializer(queryset, many=True)
+            serializer = self.serializer_class(queryset, many=True)
             return Response(serializer.data)
-        except:
+        except Exception:
             return Response(status=400)
 
 

@@ -1138,6 +1138,32 @@ class EvaluationTool(CloneMixin, models.Model):
     max = models.IntegerField(verbose_name="Минимальное значение", blank=True, null=True)
     evaluation_criteria = models.CharField(max_length=2048, verbose_name="Критерии оценивания", blank=True, null=True)
 
+    parent = models.ForeignKey('workprogramsapp.EvaluationTool', models.SET_NULL, blank=True, null=True, verbose_name="Родительское оценочное средство")
+    is_available_for_clone = models.BooleanField(default=False, verbose_name="Оценочное средство доступно для клонирования")
+
+    def clone_evaluation_tool(self, full_clone = True):
+        from copy import deepcopy
+
+        if not self.is_available_for_clone:
+            return
+
+        if full_clone:
+            evaluation_tool_copy = deepcopy(self)
+
+            evaluation_tool_copy.pk = None
+
+            if not evaluation_tool_copy.parent:
+                evaluation_tool_copy.parent = self
+
+            evaluation_tool_copy.save()
+
+        else:
+            evaluation_tool_copy = EvaluationTool.objects.create(
+                name=self.name, type=self.type, parent=self.parent or self
+            )
+
+        return evaluation_tool_copy
+
     def __str__(self):
         return self.name
 

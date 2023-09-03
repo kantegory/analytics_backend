@@ -25,7 +25,7 @@ from .profession.views import SkillsOfProfessionInProfessionList, SkillsOfProfes
 from .profession.views import SkillsOfRoleInRoleList, SkillsOfRoleInRoleCreateAPIView, SkillsOfRoleInRoleUpdateView, \
     SkillsOfRoleInRoleDestroyView
 from .views import AcademicPlanCreateAPIView, AcademicPlanListAPIView, AcademicPlanDetailsView, AcademicPlanDestroyView, \
-    AcademicPlanUpdateView, ImplementationAcademicPlanAPIView, ZunManyForAllGhViewSet
+    AcademicPlanUpdateView, EvaluationToolCopyAPI, ImplementationAcademicPlanAPIView, ZunManyForAllGhViewSet, EvaluationToolsBankAPI
 from .views import BibliographicReferenceListCreateAPIView, BibliographicReferenceDetailsView, \
     BibliographicReferenceDestroyView, \
     BibliographicReferenceUpdateView, WorkProgramBibliographicReferenceUpdateView, \
@@ -143,6 +143,8 @@ urlpatterns = [
     # Работы с темами и разделами
     path('api/tools/', EvaluationToolListAPI.as_view(), name='tools'),
     path('api/tools/<int:pk>', EvaluationToolDetailAPI.as_view(), name='tool_detail'),
+    path('api/tools/actions/copy', EvaluationToolCopyAPI.as_view(), name='tool_copy'),
+    path('api/tools/actions/bank', EvaluationToolsBankAPI.as_view(), name='tool_bank'),
     path('api/toolsinworkprogram/<int:workprogram_id>', EvaluationToolInWorkProgramList.as_view()),
 
     path('api/sections/', DisciplineSectionListAPI.as_view(), name='sections'),
